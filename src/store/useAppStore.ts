@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants';
-import { pickRandomCurio } from '@/services/curioService';
+import { clearPrefetchedNext } from '@/services/curioPrefetchService';
+import { pickRandomCurio, getCurioById, getCuriosByCategories } from '@/services/curioService';
 import { getSecureItem, setSecureItem } from '@/services/storage';
 import type { AppState, Category, ThemeMode } from '@/types/curio';
 import {
@@ -35,7 +36,7 @@ interface AppStore extends AppState {
   recordDailyOpen: () => Promise<void>;
   getTodaysCurio: () => Promise<string>;
   refreshTodaysCurio: () => Promise<string>;
-  pickNextCurio: (excludeCurioId?: string) => Promise<string>;
+  pickNextCurio: (excludeCurioId?: string, preferredId?: string) => Promise<string>;
 }
 
 async function persistState(state: AppState): Promise<void> {
@@ -103,6 +104,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   updateInterests: async (interests) => {
+    clearPrefetchedNext();
     const next = {
       ...get(),
       interests,
@@ -174,13 +176,36 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return curio.id;
   },
 
-  pickNextCurio: async (excludeCurioId) => {
+  pickNextCurio: async (excludeCurioId, preferredId) => {
     const state = get();
-    const { curio, resetSeen } = pickRandomCurio(
-      state.interests,
-      state.seenCurioIds,
-      excludeCurioId,
-    );
+    let curio;
+    let resetSeen = false;
+
+    if (preferredId) {
+      const preferred = getCurioById(preferredId);
+      const pool = getCuriosByCategories(state.interests);
+      const unseen = pool.filter(
+        (candidate) =>
+          !state.seenCurioIds.includes(candidate.id) &&
+          candidate.id !== excludeCurioId,
+      );
+
+      if (preferred && unseen.some((candidate) => candidate.id === preferredId)) {
+        curio = preferred;
+      } else {
+        ({ curio, resetSeen } = pickRandomCurio(
+          state.interests,
+          state.seenCurioIds,
+          excludeCurioId,
+        ));
+      }
+    } else {
+      ({ curio, resetSeen } = pickRandomCurio(
+        state.interests,
+        state.seenCurioIds,
+        excludeCurioId,
+      ));
+    }
 
     const seenCurioIds = resetSeen
       ? [curio.id]

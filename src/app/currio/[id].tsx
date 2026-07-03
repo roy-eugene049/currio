@@ -1,9 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
 import { CurioReader } from '@/components/home/CurioReader';
+import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { ScreenBackground } from '@/components/ScreenBackground';
+import { useCurioExperience } from '@/hooks/useCurioExperience';
 import { getCurioById } from '@/services/curioService';
 
 export default function SavedCurrioScreen() {
@@ -13,6 +16,7 @@ export default function SavedCurrioScreen() {
 
   const curioId = Array.isArray(id) ? id[0] : id;
   const curio = curioId ? getCurioById(curioId) : undefined;
+  const { isReady } = useCurioExperience(curio);
 
   if (!curio) {
     return (
@@ -23,6 +27,16 @@ export default function SavedCurrioScreen() {
           message="This saved currio may have been removed."
         />
       </View>
+    );
+  }
+
+  if (!isReady) {
+    return (
+      <ScreenBackground>
+        <SafeAreaView style={styles.loading}>
+          <LoadingSkeleton />
+        </SafeAreaView>
+      </ScreenBackground>
     );
   }
 
@@ -46,5 +60,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+  },
+  loading: {
+    flex: 1,
   },
 });

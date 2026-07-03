@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { BRAND } from '@/theme/brand';
+import { STREAK } from '@/theme/streak';
 import { getUserDisplayName } from '@/utils/user';
 
 export default function WelcomeScreen() {
@@ -73,13 +74,15 @@ export default function WelcomeScreen() {
               style={[
                 styles.statPill,
                 {
-                  backgroundColor: isDark ? `${BRAND.deepMuted}EE` : colors.card,
-                  borderColor: isDark ? `${BRAND.lavender}22` : colors.border,
+                  backgroundColor: isDark ? STREAK.bgDark : STREAK.bg,
+                  borderColor: isDark ? STREAK.borderDark : STREAK.border,
+                  borderWidth: 1,
                 },
               ]}
             >
-              <Text style={[styles.statValue, { color: colors.primary }]}>1</Text>
-              <Text style={[styles.statLabel, { color: colors.textMuted }]}>
+              <Text style={styles.streakEmoji}>🔥</Text>
+              <Text style={[styles.statValue, { color: STREAK.flame }]}>1</Text>
+              <Text style={[styles.statLabel, { color: isDark ? STREAK.textOnDark : STREAK.text }]}>
                 Day streak starts now
               </Text>
             </View>
@@ -178,6 +181,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 4,
+  },
+  streakEmoji: {
+    fontSize: 24,
+    marginBottom: 6,
   },
   statLabel: {
     fontSize: 14,

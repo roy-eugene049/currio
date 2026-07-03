@@ -3,6 +3,7 @@ import { useColorScheme as useSystemColorScheme } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { BRAND } from '@/theme/brand';
 import { LIGHT } from '@/theme/lightPalette';
+import { STREAK } from '@/theme/streak';
 import { NEUMO } from '@/theme/neumorphic';
 
 export function useTheme() {
@@ -39,7 +40,7 @@ export function useTheme() {
           chip: '#334155',
           chipBorder: `${BRAND.lavender}22`,
           surfaceMuted: BRAND.deepMuted,
-          streak: BRAND.lavender,
+          streak: STREAK.flame,
           glow: BRAND.glow,
           gradientScreen: [BRAND.deep, '#1E0040', BRAND.deepMuted] as const,
         }
@@ -63,7 +64,7 @@ export function useTheme() {
           chip: LIGHT.chip,
           chipBorder: LIGHT.chipBorder,
           surfaceMuted: LIGHT.surfaceMuted,
-          streak: LIGHT.streakText,
+          streak: STREAK.flame,
           glow: BRAND.glow,
           gradientScreen: LIGHT.gradient.screen,
         },

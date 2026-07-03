@@ -5,11 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  FadeIn,
   FadeInDown,
-  FadeInUp,
   FadeOut,
-  FadeOutUp,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -23,6 +20,7 @@ import { CurioStreakBadge } from '@/components/home/CurioStreakBadge';
 import { AppChromeChip } from '@/components/ui/AppChromeChip';
 import { GlassChip } from '@/components/ui/GlassChip';
 import { CATEGORY_ICONS } from '@/constants';
+import { useCurioExperience } from '@/hooks/useCurioExperience';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { getCategoryTheme } from '@/theme/categoryThemes';
@@ -49,6 +47,7 @@ export function CurioReader({
   const { colors, brand } = useTheme();
   const streak = useAppStore((s) => s.streak);
   const theme = getCategoryTheme(curio.category);
+  const { backdropUrl } = useCurioExperience(curio);
   const isSavedView = variant === 'saved';
   const categoryIcon = CATEGORY_ICONS[curio.category] as keyof typeof Ionicons.glyphMap;
   const iconRotation = useSharedValue(0);
@@ -87,14 +86,9 @@ export function CurioReader({
 
   return (
     <View style={styles.root}>
-      <Animated.View
-        key={curio.category}
-        entering={FadeIn.duration(450)}
-        exiting={FadeOut.duration(280)}
-        style={styles.backdropLayer}
-      >
-        <CurioBackdrop theme={theme} />
-      </Animated.View>
+      <View style={styles.backdropLayer}>
+        <CurioBackdrop theme={theme} imageUrl={backdropUrl} />
+      </View>
 
       <View
         style={[
@@ -106,8 +100,8 @@ export function CurioReader({
       >
         <Animated.View
           key={curio.id}
-          entering={FadeInDown.springify().damping(18).stiffness(140)}
-          exiting={FadeOutUp.duration(220)}
+          entering={FadeInDown.duration(280).springify().damping(20).stiffness(180)}
+          exiting={FadeOut.duration(180)}
           style={styles.currioBlock}
         >
           <Text
@@ -154,9 +148,7 @@ export function CurioReader({
       </View>
 
       {isSavedView ? (
-        <Animated.View
-          key={`saved-bar-${curio.id}`}
-          entering={FadeIn.delay(80).duration(320)}
+        <View
           pointerEvents="box-none"
           style={[styles.savedTopBar, { paddingTop: insets.top + 12 }]}
         >
@@ -207,11 +199,9 @@ export function CurioReader({
               </BlurView>
             </LinearGradient>
           </Pressable>
-        </Animated.View>
+        </View>
       ) : (
-        <Animated.View
-          key={`bar-${curio.id}`}
-          entering={FadeIn.delay(120).duration(300)}
+        <View
           pointerEvents="box-none"
           style={[styles.topBar, { paddingTop: insets.top + 16 }]}
         >
@@ -246,13 +236,11 @@ export function CurioReader({
               </Pressable>
             </AppChromeChip>
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {isSavedView ? (
-        <Animated.View
-          key={`topic-${curio.id}`}
-          entering={FadeInUp.delay(200).springify().damping(16).stiffness(120)}
+        <View
           pointerEvents="none"
           style={[styles.bottomTopic, { bottom: bottomInset + 20 }]}
         >
@@ -277,7 +265,7 @@ export function CurioReader({
               </Text>
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
       ) : null}
     </View>
   );

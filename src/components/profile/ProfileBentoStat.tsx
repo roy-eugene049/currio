@@ -6,6 +6,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import type { ProfilePalette } from '@/hooks/useProfilePalette';
 import { BRAND } from '@/theme/brand';
+import { STREAK } from '@/theme/streak';
 
 type StatKind = 'streak' | 'saved' | 'topics';
 
@@ -32,9 +33,9 @@ const STAT_THEMES: Record<
   }
 > = {
   streak: {
-    border: ['#FF7A45', `${BRAND.electric}88`, '#FFB347'],
-    iconGradient: ['#FF6B35', '#FF9F43'],
-    glow: '#FF6B3544',
+    border: ['#FF7A45', '#FF9F4333', '#FFB347'],
+    iconGradient: [...STREAK.gradient],
+    glow: STREAK.bgDark,
     iconColor: '#FFF8F3',
   },
   saved: {
