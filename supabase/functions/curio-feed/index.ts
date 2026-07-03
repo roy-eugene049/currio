@@ -1,19 +1,13 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
+import { pickRandomCategory } from "../_shared/categories.ts";
+import { isAiGenerationEnabled, mapRow, pickRandom, type CurioRow } from "../_shared/curio.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-};
-
-type CurioRow = {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  reading_time: string;
-  image_url: string | null;
 };
 
 type FeedMode = "daily" | "next";
@@ -84,11 +78,22 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (curio) {
-      return json({ curio: mapRow(curio as CurioRow) });
+      const source = (curio as CurioRow & { source?: string }).source;
+      if (!isAiGenerationEnabled() || source === "ai") {
+        return json({ curio: mapRow(curio as CurioRow) });
+      }
     }
   }
 
-  const curio = await pickCurio(supabase, categories, seenIds, excludeId);
+  const curio = await pickAiFirstCurio({
+    supabase,
+    categories,
+    seenIds,
+    excludeId,
+    authHeader,
+    supabaseUrl,
+    supabaseAnonKey,
+  });
 
   if (!curio) {
     return json({ error: "No curios available" }, 404);
@@ -101,13 +106,49 @@ function parseMode(value: string | null): FeedMode {
   return value === "next" ? "next" : "daily";
 }
 
-async function pickCurio(
+/**
+ * AI-first: generate or reuse AI curios, then fall back to seeded catalog.
+ */
+async function pickAiFirstCurio(input: {
+  supabase: SupabaseClient;
+  categories: string[];
+  seenIds: Set<string>;
+  excludeId?: string;
+  authHeader: string;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}): Promise<CurioRow | null> {
+  if (isAiGenerationEnabled()) {
+    const excludeTitles = await fetchRecentTitles(input.supabase, input.seenIds);
+    const generated = await callGenerateCurio({
+      authHeader: input.authHeader,
+      supabaseUrl: input.supabaseUrl,
+      supabaseAnonKey: input.supabaseAnonKey,
+      category: pickRandomCategory(input.categories),
+      excludeTitles,
+      excludeId: input.excludeId,
+    });
+
+    if (generated && generated.id !== input.excludeId) {
+      return generated;
+    }
+  }
+
+  return pickFromSeedPool(
+    input.supabase,
+    input.categories,
+    input.seenIds,
+    input.excludeId,
+  );
+}
+
+async function pickFromSeedPool(
   supabase: SupabaseClient,
   categories: string[],
   seenIds: Set<string>,
   excludeId?: string,
 ): Promise<CurioRow | null> {
-  const pool = await fetchPublishedPool(supabase, categories);
+  const pool = await fetchSeedPool(supabase, categories);
   if (pool.length === 0) return null;
 
   const unseen = pool.filter(
@@ -125,7 +166,7 @@ async function pickCurio(
   return pickRandom(repeatable);
 }
 
-async function fetchPublishedPool(
+async function fetchSeedPool(
   supabase: SupabaseClient,
   categories: string[],
 ): Promise<CurioRow[]> {
@@ -133,36 +174,98 @@ async function fetchPublishedPool(
     .from("curios")
     .select("*")
     .eq("is_published", true)
-    .eq("locale", "en");
+    .eq("locale", "en")
+    .eq("source", "seed");
 
   if (categories.length > 0) {
     query = query.in("category", categories);
   }
 
-  const { data, error } = await query.limit(200);
+  const { data, error } = await query.limit(600);
 
   if (error) {
-    console.error("fetchPublishedPool:", error.message);
+    console.error("fetchSeedPool:", error.message);
     return [];
   }
 
   return (data ?? []) as CurioRow[];
 }
 
-function pickRandom<T>(items: T[]): T | null {
-  if (items.length === 0) return null;
-  return items[Math.floor(Math.random() * items.length)] ?? null;
+async function fetchRecentTitles(
+  supabase: SupabaseClient,
+  seenIds: Set<string>,
+): Promise<string[]> {
+  const ids = [...seenIds].slice(-20);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("curios")
+    .select("title")
+    .in("id", ids);
+
+  if (error) {
+    console.error("fetchRecentTitles:", error.message);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((row) => row.title)
+    .filter((title): title is string => Boolean(title));
 }
 
-function mapRow(row: CurioRow) {
-  return {
-    id: row.id,
-    title: row.title,
-    content: row.content,
-    category: row.category,
-    readingTime: row.reading_time,
-    image: row.image_url ?? null,
-  };
+async function callGenerateCurio(input: {
+  authHeader: string;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  category: string;
+  excludeTitles: string[];
+  excludeId?: string;
+}): Promise<CurioRow | null> {
+  try {
+    const response = await fetch(`${input.supabaseUrl}/functions/v1/generate-curio`, {
+      method: "POST",
+      headers: {
+        Authorization: input.authHeader,
+        apikey: input.supabaseAnonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        category: input.category,
+        excludeTitles: input.excludeTitles,
+        excludeId: input.excludeId,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("generate-curio:", response.status, await response.text());
+      return null;
+    }
+
+    const body = (await response.json()) as {
+      curio?: {
+        id: string;
+        title: string;
+        content: string;
+        category: string;
+        readingTime: string;
+        image: string | null;
+      };
+    };
+
+    if (!body.curio) return null;
+
+    return {
+      id: body.curio.id,
+      title: body.curio.title,
+      content: body.curio.content,
+      category: body.curio.category,
+      reading_time: body.curio.readingTime,
+      image_url: body.curio.image,
+    };
+  } catch (error) {
+    console.error("callGenerateCurio:", error);
+    return null;
+  }
 }
 
 async function respondWithCurio(

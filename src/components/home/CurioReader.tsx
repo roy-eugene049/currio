@@ -2,15 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  FadeInDown,
+  FadeIn,
   FadeOut,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +29,7 @@ interface CurioReaderProps {
   bottomInset: number;
   onNextCurio?: (currentCurioId: string) => Promise<unknown>;
   isLoadingNext?: boolean;
+  isNextReady?: boolean;
   onBack?: () => void;
   variant?: 'default' | 'saved';
 }
@@ -40,6 +39,7 @@ export function CurioReader({
   bottomInset,
   onNextCurio,
   isLoadingNext = false,
+  isNextReady = false,
   onBack,
   variant = 'default',
 }: CurioReaderProps) {
@@ -50,18 +50,10 @@ export function CurioReader({
   const { backdropUrl } = useCurioExperience(curio);
   const isSavedView = variant === 'saved';
   const categoryIcon = CATEGORY_ICONS[curio.category] as keyof typeof Ionicons.glyphMap;
-  const iconRotation = useSharedValue(0);
+  const nextScale = useSharedValue(1);
 
-  useEffect(() => {
-    if (isLoadingNext) {
-      iconRotation.value = withRepeat(withTiming(360, { duration: 700 }), -1, false);
-      return;
-    }
-    iconRotation.value = 0;
-  }, [iconRotation, isLoadingNext]);
-
-  const iconAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${iconRotation.value}deg` }],
+  const nextButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: nextScale.value }],
   }));
 
   const handleShare = async () => {
@@ -72,6 +64,10 @@ export function CurioReader({
 
   const handleNext = () => {
     if (isLoadingNext || !onNextCurio) return;
+
+    nextScale.value = withSpring(0.96, { damping: 14, stiffness: 320 }, () => {
+      nextScale.value = withSpring(1, { damping: 12, stiffness: 220 });
+    });
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
@@ -100,8 +96,8 @@ export function CurioReader({
       >
         <Animated.View
           key={curio.id}
-          entering={FadeInDown.duration(280).springify().damping(20).stiffness(180)}
-          exiting={FadeOut.duration(180)}
+          entering={FadeIn.duration(240)}
+          exiting={FadeOut.duration(160)}
           style={styles.currioBlock}
         >
           <Text
@@ -128,21 +124,23 @@ export function CurioReader({
             disabled={isLoadingNext}
             accessibilityRole="button"
             accessibilityLabel="Show another currio"
+            accessibilityState={{ busy: isLoadingNext }}
             style={({ pressed }) => [styles.nextPressable, pressed && styles.nextPressed]}
           >
-            <LinearGradient
-              colors={[brand.electric, brand.deep]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.nextButton}
-            >
-              <Animated.View style={iconAnimatedStyle}>
+            <Animated.View style={nextButtonStyle}>
+              <LinearGradient
+                colors={[brand.electric, brand.deep]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.nextButton,
+                  isNextReady && styles.nextButtonReady,
+                ]}
+              >
                 <Ionicons name="shuffle-outline" size={18} color={brand.mist} />
-              </Animated.View>
-              <Text style={styles.nextLabel}>
-                {isLoadingNext ? 'Finding one…' : 'Another currio'}
-              </Text>
-            </LinearGradient>
+                <Text style={styles.nextLabel}>Another currio</Text>
+              </LinearGradient>
+            </Animated.View>
           </Pressable>
         ) : null}
       </View>
@@ -326,6 +324,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 14,
     elevation: 10,
+  },
+  nextButtonReady: {
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
   },
   nextLabel: {
     fontSize: 15,

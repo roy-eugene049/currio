@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   fetchDailyCurio,
@@ -8,7 +8,10 @@ import {
 } from '@/services/curioApiService';
 import { prepareCurioExperience } from '@/services/curioImageService';
 import {
+  ensurePrefetchedNext,
+  peekPrefetchedNext,
   prefetchNextCurio,
+  subscribePrefetch,
   takePrefetchedNext,
 } from '@/services/curioPrefetchService';
 import { getCurioById } from '@/services/curioService';
@@ -35,9 +38,19 @@ export function useTodaysCurio() {
   const remoteEnabled = isRemoteCuriosEnabled() && Boolean(session);
 
   const queryClient = useQueryClient();
+  const queryKey = ['todays-curio', remoteEnabled ? 'remote' : 'local'] as const;
+
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [, setPrefetchTick] = useState(0);
+
+  const bumpPrefetch = useCallback(() => {
+    setPrefetchTick((tick) => tick + 1);
+  }, []);
+
+  useEffect(() => subscribePrefetch(bumpPrefetch), [bumpPrefetch]);
 
   const query = useQuery({
-    queryKey: ['todays-curio', remoteEnabled ? 'remote' : 'local'],
+    queryKey,
     queryFn: async () => {
       if (remoteEnabled) {
         try {
@@ -63,47 +76,70 @@ export function useTodaysCurio() {
     void prefetchNextCurio(query.data.id);
   }, [query.data?.id]);
 
-  const nextMutation = useMutation({
-    mutationFn: async (currentCurioId: string) => {
-      if (remoteEnabled) {
-        try {
-          const prefetched = takePrefetchedNext(currentCurioId);
-          if (prefetched) {
-            await recordRemoteCurio(prefetched.id);
-            return prefetched;
-          }
+  const isNextReady = query.data
+    ? Boolean(peekPrefetchedNext(query.data.id))
+    : false;
 
-          const curio = await fetchNextCurio(currentCurioId);
-          await recordRemoteCurio(curio.id);
-          await prepareCurioExperience(curio);
-          return curio;
-        } catch (error) {
-          if (__DEV__) {
-            console.warn('[Currio] Remote next curio failed, using local:', error);
+  const fetchSlowNext = useCallback(
+    async (currentCurioId: string): Promise<Curio> => {
+      if (remoteEnabled) {
+        const curio = await fetchNextCurio(currentCurioId);
+        await prepareCurioExperience(curio);
+        return curio;
+      }
+
+      const id = await pickNextCurio(currentCurioId);
+      const curio = getCurioById(id);
+      if (!curio) throw new Error('Curio not found');
+      await prepareCurioExperience(curio);
+      return curio;
+    },
+    [pickNextCurio, remoteEnabled],
+  );
+
+  const applyNextCurio = useCallback(
+    (next: Curio, currentCurioId: string) => {
+      queryClient.setQueryData<Curio>(queryKey, next);
+
+      void (async () => {
+        if (remoteEnabled) {
+          await recordRemoteCurio(next.id);
+        } else {
+          await pickNextCurio(currentCurioId, next.id);
+        }
+        await prefetchNextCurio(next.id);
+      })();
+    },
+    [pickNextCurio, queryClient, queryKey, recordRemoteCurio, remoteEnabled],
+  );
+
+  const loadNext = useCallback(
+    async (currentCurioId: string) => {
+      let next = takePrefetchedNext(currentCurioId);
+
+      if (!next) {
+        setIsAdvancing(true);
+        try {
+          await ensurePrefetchedNext(currentCurioId);
+          next = takePrefetchedNext(currentCurioId);
+          if (!next) {
+            next = await fetchSlowNext(currentCurioId);
           }
+        } finally {
+          setIsAdvancing(false);
         }
       }
 
-      const prefetched = takePrefetchedNext(currentCurioId);
-      const id = await pickNextCurio(currentCurioId, prefetched?.id);
-      const curio = getCurioById(id);
-      if (!curio) throw new Error('Curio not found');
-
-      if (!prefetched || prefetched.id !== id) {
-        await prepareCurioExperience(curio);
-      }
-
-      return curio;
+      applyNextCurio(next, currentCurioId);
+      return next;
     },
-    onSuccess: (curio) => {
-      queryClient.setQueryData<Curio>(['todays-curio', remoteEnabled ? 'remote' : 'local'], curio);
-      void prefetchNextCurio(curio.id);
-    },
-  });
+    [applyNextCurio, fetchSlowNext],
+  );
 
   return {
     ...query,
-    loadNext: (currentCurioId: string) => nextMutation.mutateAsync(currentCurioId),
-    isLoadingNext: nextMutation.isPending,
+    loadNext,
+    isLoadingNext: isAdvancing,
+    isNextReady,
   };
 }

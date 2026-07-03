@@ -10,7 +10,7 @@ import { useTodaysCurio } from '@/hooks/useTodaysCurio';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { data: curio, isLoading, isError, loadNext, isLoadingNext } =
+  const { data: curio, isLoading, isError, loadNext, isLoadingNext, isNextReady } =
     useTodaysCurio();
 
   const bottomInset = getTabBarInset(insets.bottom);
@@ -43,6 +43,7 @@ export default function HomeScreen() {
           bottomInset={bottomInset}
           onNextCurio={loadNext}
           isLoadingNext={isLoadingNext}
+          isNextReady={isNextReady}
         />
       )}
     </View>

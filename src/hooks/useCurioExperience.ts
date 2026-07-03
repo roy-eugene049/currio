@@ -40,10 +40,12 @@ export function useCurioExperience(curio: Curio | undefined) {
     }
 
     let cancelled = false;
-    setState((prev) => ({
+    const previousUrl = peekCurioBackdropUrl(curio.id);
+
+    setState({
       isReady: false,
-      backdropUrl: prev.backdropUrl,
-    }));
+      backdropUrl: previousUrl === undefined ? null : (previousUrl ?? null),
+    });
 
     void prepareCurioExperience(curio).then(() => {
       if (cancelled) return;

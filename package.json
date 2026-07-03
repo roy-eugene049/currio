@@ -13,9 +13,12 @@
     "supabase:login": "supabase login",
     "supabase:link": "supabase link --project-ref YOUR_PROJECT_REF",
     "supabase:setup": "node ./scripts/supabase-setup.mjs",
+    "curios:generate": "node ./scripts/generate-curios.js",
     "curios:export": "node ./scripts/export-curios.mjs",
     "curios:seed": "node ./scripts/seed-curios.mjs",
     "supabase:deploy:curio-feed": "supabase functions deploy curio-feed",
+    "supabase:deploy:generate-curio": "supabase functions deploy generate-curio",
+    "supabase:deploy:functions": "supabase functions deploy curio-feed && supabase functions deploy generate-curio",
     "test:curio-feed": "node ./scripts/test-curio-feed.mjs"
   },
   "dependencies": {
