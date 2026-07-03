@@ -33,6 +33,8 @@ interface AuthStore {
 async function bindAppStateToUser(user: User | null | undefined) {
   if (!user?.id) return;
   await useAppStore.getState().reconcileForAuthUser(user.id);
+  const { pullAndMerge } = await import('@/services/syncService');
+  await pullAndMerge();
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({

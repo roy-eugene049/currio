@@ -58,4 +58,5 @@ export const APP_VERSION = '1.0.0';
 export const STORAGE_KEYS = {
   APP_STATE: 'currio_app_state',
   LAST_AUTH_USER_ID: 'currio_last_auth_user_id',
+  LOCAL_STATE_UPDATED_AT: 'currio_local_state_updated_at',
 } as const;

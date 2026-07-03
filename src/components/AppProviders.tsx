@@ -36,6 +36,8 @@ function HydrationGate({ children }: { children: ReactNode }) {
         const id = useAuthStore.getState().user?.id;
         if (id) {
           await reconcileForAuthUser(id);
+          const { pullAndMerge } = await import('@/services/syncService');
+          await pullAndMerge();
         }
         await recordDailyOpen();
       })

@@ -1,6 +1,8 @@
-import { pickRandomCurio } from '@/services/curioService';
+import { isRemoteCuriosEnabled } from '@/services/curioApiService';
 import { prepareCurioExperience } from '@/services/curioImageService';
+import { pickRandomCurio } from '@/services/curioService';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { Curio } from '@/types/curio';
 
 type PrefetchedSlot = {
@@ -25,13 +27,21 @@ export function clearPrefetchedNext(): void {
 
 /**
  * Picks the next curio (without mutating store) and preloads its backdrop.
- * Call while the user reads the current curio so "Another currio" feels instant.
+ * Call while the user reads the current curio so "Another curio" feels instant.
  */
 export async function prefetchNextCurio(forCurioId: string): Promise<Curio | null> {
   if (slot?.forCurioId === forCurioId) return slot.nextCurio;
 
   if (inflightPrefetch?.forCurioId === forCurioId) {
     return inflightPrefetch.task;
+  }
+
+  const remoteEnabled =
+    isRemoteCuriosEnabled() && Boolean(useAuthStore.getState().session);
+
+  // Remote feed marks curios as seen on every API call — skip prefetch until queue (Phase 7).
+  if (remoteEnabled) {
+    return null;
   }
 
   const task = (async () => {

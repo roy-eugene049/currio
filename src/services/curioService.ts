@@ -5,6 +5,22 @@ export function getCurioById(id: string): Curio | undefined {
   return CURIOS.find((curio) => curio.id === id);
 }
 
+export async function resolveCurioById(id: string): Promise<Curio | undefined> {
+  const local = getCurioById(id);
+  if (local) return local;
+
+  const { isRemoteCuriosEnabled, fetchCurioById } = await import(
+    '@/services/curioApiService'
+  );
+
+  if (!isRemoteCuriosEnabled()) {
+    return undefined;
+  }
+
+  const remote = await fetchCurioById(id);
+  return remote ?? undefined;
+}
+
 export function getCuriosByCategories(categories: Category[]): Curio[] {
   if (categories.length === 0) return CURIOS;
   return CURIOS.filter((curio) => categories.includes(curio.category));
@@ -48,5 +64,31 @@ export function pickRandomCurio(
 export function getBookmarkedCurios(bookmarkIds: string[]): Curio[] {
   return bookmarkIds
     .map((id) => getCurioById(id))
+    .filter((curio): curio is Curio => curio !== undefined);
+}
+
+export async function resolveBookmarkedCurios(bookmarkIds: string[]): Promise<Curio[]> {
+  const local = getBookmarkedCurios(bookmarkIds);
+  const { isRemoteCuriosEnabled, fetchCuriosByIds } = await import(
+    '@/services/curioApiService'
+  );
+
+  if (!isRemoteCuriosEnabled()) {
+    return local;
+  }
+
+  const missingIds = bookmarkIds.filter((id) => !getCurioById(id));
+  if (missingIds.length === 0) {
+    return local;
+  }
+
+  const remote = await fetchCuriosByIds(missingIds);
+  const byId = new Map<string, Curio>();
+  for (const curio of [...local, ...remote]) {
+    byId.set(curio.id, curio);
+  }
+
+  return bookmarkIds
+    .map((id) => byId.get(id))
     .filter((curio): curio is Curio => curio !== undefined);
 }

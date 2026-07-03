@@ -38,10 +38,14 @@ interface AppStore extends AppState {
   refreshTodaysCurio: () => Promise<string>;
   pickNextCurio: (excludeCurioId?: string, preferredId?: string) => Promise<string>;
   reconcileForAuthUser: (userId: string) => Promise<void>;
+  applySyncedState: (state: AppState) => Promise<void>;
+  recordRemoteCurio: (curioId: string, options?: { isDaily?: boolean }) => Promise<void>;
 }
 
 async function persistState(state: AppState): Promise<void> {
   await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
+  await setSecureItem(STORAGE_KEYS.LOCAL_STATE_UPDATED_AT, new Date().toISOString());
+  void import('@/services/syncService').then(({ schedulePush }) => schedulePush());
 }
 
 function createFreshAppState(): AppState {
@@ -77,8 +81,34 @@ export const useAppStore = create<AppStore>((set, get) => ({
     clearPrefetchedNext();
     const fresh = createFreshAppState();
     set(fresh);
-    await persistState(fresh);
+    await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(fresh));
+    await setSecureItem(STORAGE_KEYS.LOCAL_STATE_UPDATED_AT, new Date(0).toISOString());
     await setSecureItem(STORAGE_KEYS.LAST_AUTH_USER_ID, userId);
+  },
+
+  applySyncedState: async (state) => {
+    clearPrefetchedNext();
+    set(state);
+    await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
+  },
+
+  recordRemoteCurio: async (curioId, options) => {
+    const state = get();
+    const today = getTodayDateString();
+    const seenCurioIds = state.seenCurioIds.includes(curioId)
+      ? state.seenCurioIds
+      : [...state.seenCurioIds, curioId];
+
+    const next: AppState = {
+      ...state,
+      seenCurioIds,
+      ...(options?.isDaily
+        ? { todaysCurioId: curioId, todaysCurioDate: today }
+        : {}),
+    };
+
+    set(next);
+    await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(next));
   },
 
   completeOnboarding: async (interests) => {
@@ -93,6 +123,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     };
     set(next);
     await persistState(next);
+    const { pushNow } = await import('@/services/syncService');
+    await pushNow();
   },
 
   completeWelcome: async () => {

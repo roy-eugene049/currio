@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +8,7 @@ import { CurioReader } from '@/components/home/CurioReader';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { useCurioExperience } from '@/hooks/useCurioExperience';
-import { getCurioById } from '@/services/curioService';
+import { resolveCurioById } from '@/services/curioService';
 
 export default function SavedCurrioScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -15,10 +16,20 @@ export default function SavedCurrioScreen() {
   const insets = useSafeAreaInsets();
 
   const curioId = Array.isArray(id) ? id[0] : id;
-  const curio = curioId ? getCurioById(curioId) : undefined;
+
+  const { data: curio, isLoading, isError } = useQuery({
+    queryKey: ['curio', curioId],
+    queryFn: async () => {
+      if (!curioId) return undefined;
+      return resolveCurioById(curioId);
+    },
+    enabled: Boolean(curioId),
+    staleTime: Infinity,
+  });
+
   const { isReady } = useCurioExperience(curio);
 
-  if (!curio) {
+  if (!curioId || isError || (!isLoading && !curio)) {
     return (
       <View style={styles.fallback}>
         <EmptyState
@@ -30,7 +41,7 @@ export default function SavedCurrioScreen() {
     );
   }
 
-  if (!isReady) {
+  if (isLoading || !curio || !isReady) {
     return (
       <ScreenBackground>
         <SafeAreaView style={styles.loading}>
@@ -58,8 +69,6 @@ const styles = StyleSheet.create({
   },
   fallback: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
   },
   loading: {
     flex: 1,

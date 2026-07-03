@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,7 +15,8 @@ import {
 } from '@/components/bookmarks/BookmarksFilterRail';
 import { useProfilePalette } from '@/hooks/useProfilePalette';
 import { useTheme } from '@/hooks/useTheme';
-import { getBookmarkedCurios } from '@/services/curioService';
+import { getBookmarkedCurios, resolveBookmarkedCurios } from '@/services/curioService';
+import { isRemoteCuriosEnabled } from '@/services/curioApiService';
 import { useAppStore } from '@/store/useAppStore';
 import { BRAND } from '@/theme/brand';
 import type { Category } from '@/types/curio';
@@ -27,13 +29,22 @@ export default function BookmarksScreen() {
 
   const bookmarkIds = useAppStore((s) => s.bookmarks);
   const interests = useAppStore((s) => s.interests);
+  const remoteEnabled = isRemoteCuriosEnabled();
 
   const [activeFilter, setActiveFilter] = useState<BookmarkFilter>('All');
 
-  const savedCurrios = useMemo(
-    () => getBookmarkedCurios([...bookmarkIds].reverse()),
-    [bookmarkIds],
-  );
+  const { data: savedCurrios = [] } = useQuery({
+    queryKey: ['bookmarks', bookmarkIds, remoteEnabled],
+    queryFn: async () => {
+      const ids = [...bookmarkIds].reverse();
+      if (remoteEnabled) {
+        return resolveBookmarkedCurios(ids);
+      }
+      return getBookmarkedCurios(ids);
+    },
+    enabled: bookmarkIds.length > 0,
+    staleTime: 30_000,
+  });
 
   const topicFilters = useMemo((): Category[] => {
     if (interests.length > 0) return interests;
