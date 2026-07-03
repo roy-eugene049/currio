@@ -139,7 +139,7 @@ export default function BookmarksScreen() {
               ]}
             >
               <LinearGradient
-                colors={[BRAND.electric, '#9B4DFF']}
+                colors={[BRAND.electric, BRAND.lavender]}
                 style={styles.emptyIcon}
               >
                 <Ionicons name="bookmark" size={26} color={BRAND.mist} />

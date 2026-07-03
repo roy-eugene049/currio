@@ -8,6 +8,7 @@ import Animated, {
 
 import { CATEGORY_ICONS } from '@/constants';
 import { useTheme } from '@/hooks/useTheme';
+import { BRAND } from '@/theme/brand';
 import type { Category } from '@/types/curio';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -58,7 +59,7 @@ export function CategoryChip({
           ...(selected || isDark
             ? {}
             : {
-                shadowColor: '#3B0270',
+                shadowColor: BRAND.deep,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.06,
                 shadowRadius: 6,

@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip } from '@/components/CategoryChip';
@@ -177,25 +177,27 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View
-            entering={FadeInDown.duration(480).springify().damping(18)}
+            entering={FadeIn.duration(480)}
             style={styles.hero}
           >
             <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR SPACE</Text>
             <View style={styles.heroRow}>
-              <LinearGradient
-                colors={[BRAND.electric, BRAND.lavender, BRAND.electric]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatarRing}
-              >
-                <View style={[styles.avatar, { backgroundColor: palette.avatarBg }]}>
-                  <Text style={[styles.initials, { color: palette.displayName }]}>
-                    {initials}
-                  </Text>
-                </View>
-              </LinearGradient>
+              <View style={styles.avatarTilt}>
+                <LinearGradient
+                  colors={[BRAND.electric, BRAND.lavender, BRAND.electric]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarRing}
+                >
+                  <View style={[styles.avatar, { backgroundColor: palette.avatarBg }]}>
+                    <Text style={[styles.initials, { color: palette.displayName }]}>
+                      {initials}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
 
-              <View style={styles.heroCopy}>
+              <View style={styles.heroCopyTilt}>
                 <Text style={[styles.displayName, { color: palette.displayName }]}>
                   {displayName}
                 </Text>
@@ -391,12 +393,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 18,
   },
+  avatarTilt: {
+    transform: [{ rotate: '-6deg' }],
+  },
   avatarRing: {
     width: 92,
     height: 92,
     borderRadius: 46,
     padding: 3,
-    transform: [{ rotate: '-6deg' }],
   },
   avatar: {
     flex: 1,
@@ -409,7 +413,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -1,
   },
-  heroCopy: {
+  heroCopyTilt: {
     flex: 1,
     transform: [{ rotate: '1deg' }],
   },
@@ -437,9 +441,9 @@ const styles = StyleSheet.create({
   },
   bentoGrid: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 12,
     marginBottom: 28,
-    minHeight: 168,
   },
   bentoStack: {
     flex: 1,

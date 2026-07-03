@@ -16,7 +16,7 @@ export const NEUMO = {
   dark: {
     background: BRAND.deep,
     surface: BRAND.deepMuted,
-    shadowDark: '#120022',
+    shadowDark: '#250052',
     shadowLight: `${BRAND.electric}22`,
     accent: BRAND.electric,
     text: BRAND.mist,

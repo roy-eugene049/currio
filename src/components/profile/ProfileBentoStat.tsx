@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { streakBackdropForStreak } from '@/constants/streakBackdropImages';
 import type { ProfilePalette } from '@/hooks/useProfilePalette';
@@ -44,13 +44,13 @@ const STAT_THEMES: Record<
   },
   saved: {
     border: [BRAND.electric, BRAND.lavender],
-    iconGradient: [BRAND.electric, '#8B3DFF'],
+    iconGradient: [BRAND.electric, BRAND.lavender],
     ambient: `${BRAND.electric}28`,
     iconColor: BRAND.mist,
   },
   topics: {
     border: [BRAND.lavender, `${BRAND.electric}99`],
-    iconGradient: ['#E879F9', BRAND.lavender],
+    iconGradient: [BRAND.lavender, BRAND.pale],
     ambient: `${BRAND.lavender}40`,
     iconColor: BRAND.deep,
   },
@@ -152,33 +152,34 @@ export function ProfileBentoStat({
     </View>
   );
 
+  const tiltStyle =
+    tilt !== '0deg' ? { flex: 1 as const, transform: [{ rotate: tilt }] } : { flex: 1 as const };
+
   const content = (
     <Animated.View
-      entering={FadeInUp.delay(delay).duration(480).springify().damping(18)}
-      style={[
-        styles.cell,
-        large ? styles.cellLarge : styles.cellSmall,
-        tilt !== '0deg' ? { transform: [{ rotate: tilt }] } : null,
-      ]}
+      entering={FadeIn.delay(delay).duration(420)}
+      style={[styles.cell, large ? styles.cellLarge : styles.cellSmall]}
     >
-      <LinearGradient
-        colors={accent.border}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.border}
-      >
-        {isStreakHero ? (
-          <View style={styles.clip}>{cardBody}</View>
-        ) : (
-          <BlurView
-            intensity={isDark ? 36 : 56}
-            tint={palette.blurTint}
-            style={styles.blur}
-          >
-            {cardBody}
-          </BlurView>
-        )}
-      </LinearGradient>
+      <View style={tiltStyle}>
+        <LinearGradient
+          colors={accent.border}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.border}
+        >
+          {isStreakHero ? (
+            <View style={styles.clip}>{cardBody}</View>
+          ) : (
+            <BlurView
+              intensity={isDark ? 36 : 56}
+              tint={palette.blurTint}
+              style={styles.blur}
+            >
+              {cardBody}
+            </BlurView>
+          )}
+        </LinearGradient>
+      </View>
     </Animated.View>
   );
 
@@ -207,12 +208,13 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.985 }],
   },
   cell: {
     flex: 1,
   },
   cellLarge: {
+    flex: 1,
+    alignSelf: 'stretch',
     minHeight: 168,
   },
   cellSmall: {

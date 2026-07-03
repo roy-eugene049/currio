@@ -20,6 +20,7 @@ import { CATEGORY_ICONS } from '@/constants';
 import { useCurioExperience } from '@/hooks/useCurioExperience';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
+import { BRAND } from '@/theme/brand';
 import { getCategoryTheme } from '@/theme/categoryThemes';
 import type { Curio } from '@/types/curio';
 
@@ -113,11 +114,11 @@ export function CurioReader({
             bounces={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Animated.View
-              key={contentKey ?? curio.id}
-              entering={FadeIn.duration(180)}
-            >
-              <View style={styles.currioBlock}>
+            <View style={styles.currioBlock}>
+              <Animated.View
+                key={contentKey ?? curio.id}
+                entering={FadeIn.duration(180)}
+              >
                 <Text
                   style={[
                     styles.title,
@@ -134,36 +135,36 @@ export function CurioReader({
                 >
                   {curio.content}
                 </Text>
+              </Animated.View>
 
-                {onNextCurio ? (
-                  <Pressable
-                    onPress={handleNext}
-                    disabled={isLoadingNext}
-                    accessibilityRole="button"
-                    accessibilityLabel="Show another currio"
-                    accessibilityState={{ busy: isLoadingNext }}
-                    style={({ pressed }) => [
-                      styles.nextPressable,
-                      pressed && styles.nextPressed,
+              {onNextCurio ? (
+              <Pressable
+                onPress={handleNext}
+                disabled={isLoadingNext}
+                accessibilityRole="button"
+                accessibilityLabel="Show another currio"
+                accessibilityState={{ busy: isLoadingNext }}
+                style={({ pressed }) => [
+                  styles.nextPressable,
+                  pressed && styles.nextPressed,
+                ]}
+              >
+                <Animated.View style={nextButtonStyle}>
+                  <LinearGradient
+                    colors={[brand.electric, brand.deep]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[
+                      styles.nextButton,
+                      isNextReady && styles.nextButtonReady,
                     ]}
                   >
-                    <Animated.View style={nextButtonStyle}>
-                      <LinearGradient
-                        colors={[brand.electric, brand.deep]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[
-                          styles.nextButton,
-                          isNextReady && styles.nextButtonReady,
-                        ]}
-                      >
-                        <Ionicons name="shuffle-outline" size={22} color={brand.mist} />
-                      </LinearGradient>
-                    </Animated.View>
-                  </Pressable>
-                ) : null}
-              </View>
-            </Animated.View>
+                    <Ionicons name="shuffle-outline" size={22} color={brand.mist} />
+                  </LinearGradient>
+                </Animated.View>
+              </Pressable>
+              ) : null}
+            </View>
           </ScrollView>
         </View>
       </View>
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6F00FF',
+    shadowColor: BRAND.electric,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 14,

@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
+import { BRAND } from '@/theme/brand';
 
 interface ScreenBackgroundProps {
   children: React.ReactNode;
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
   glow: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: '#6F00FF',
+    backgroundColor: BRAND.electric,
     opacity: 0.06,
   },
   glowOne: {

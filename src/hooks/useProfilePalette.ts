@@ -33,7 +33,7 @@ export function useProfilePalette(isDark: boolean): ProfilePalette {
     () =>
       isDark
         ? {
-            gradient: [BRAND.deep, '#1E0040', BRAND.deepMuted],
+            gradient: [BRAND.deep, '#3D0E7A', BRAND.deepMuted],
             orbOpacity: 0.12,
             kicker: `${BRAND.lavender}99`,
             displayName: BRAND.mist,
@@ -47,7 +47,7 @@ export function useProfilePalette(isDark: boolean): ProfilePalette {
             bentoIcon: BRAND.lavender,
             bentoValue: BRAND.mist,
             bentoLabel: `${BRAND.lavender}CC`,
-            sectionTag: `${BRAND.electric}CC`,
+            sectionTag: BRAND.lavender,
             tileBg: `${BRAND.deepMuted}CC`,
             tileBorder: `${BRAND.lavender}22`,
             tileTitle: BRAND.mist,
@@ -71,7 +71,7 @@ export function useProfilePalette(isDark: boolean): ProfilePalette {
             bentoIcon: BRAND.electric,
             bentoValue: LIGHT.text,
             bentoLabel: LIGHT.textMuted,
-            sectionTag: BRAND.electric,
+            sectionTag: LIGHT.textSecondary,
             tileBg: LIGHT.surface,
             tileBorder: LIGHT.border,
             tileTitle: LIGHT.text,

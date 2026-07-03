@@ -47,8 +47,17 @@ interface AppStore extends AppState {
   recordRemoteCurio: (curioId: string, options?: { isDaily?: boolean }) => Promise<void>;
 }
 
+const MAX_PERSISTED_SEEN_IDS = 48;
+
 async function persistState(state: AppState): Promise<void> {
-  await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
+  const payload: AppState = {
+    ...state,
+    seenCurioIds:
+      state.seenCurioIds.length > MAX_PERSISTED_SEEN_IDS
+        ? state.seenCurioIds.slice(-MAX_PERSISTED_SEEN_IDS)
+        : state.seenCurioIds,
+  };
+  await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(payload));
   await setSecureItem(STORAGE_KEYS.LOCAL_STATE_UPDATED_AT, new Date().toISOString());
   void import('@/services/syncService').then(({ schedulePush }) => schedulePush());
 }

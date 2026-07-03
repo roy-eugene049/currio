@@ -126,7 +126,7 @@ export function ThemeAppearanceSection({
                   >
                     {selected ? (
                       <LinearGradient
-                        colors={[BRAND.electric, '#9B4DFF']}
+                        colors={[BRAND.electric, BRAND.lavender]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.optionFill}

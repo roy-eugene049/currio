@@ -90,7 +90,7 @@ export function BookmarksFilterRail({
                   >
                     {selected ? (
                       <LinearGradient
-                        colors={[BRAND.electric, '#9B4DFF']}
+                        colors={[BRAND.electric, BRAND.lavender]}
                         start={{ x: 0, y: 0.5 }}
                         end={{ x: 1, y: 0.5 }}
                         style={styles.pillActive}

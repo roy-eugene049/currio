@@ -6,16 +6,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#4F46E5',
-        secondary: '#8B5CF6',
-        accent: '#06B6D4',
-        background: '#F8FAFC',
-        dark: '#0F172A',
+        primary: '#6F00FF',
+        secondary: '#E1B0FF',
+        accent: '#31006E',
+        background: '#FFF2F2',
+        dark: '#31006E',
         card: '#FFFFFF',
-        'card-dark': '#1E293B',
-        muted: '#64748B',
-        border: '#E2E8F0',
-        'border-dark': '#334155',
+        'card-dark': '#4A0A99',
+        muted: '#9478B5',
+        border: '#EDE0FF',
+        'border-dark': '#5A2088',
       },
       borderRadius: {
         card: '24px',
@@ -24,7 +24,7 @@ module.exports = {
         sans: ['System'],
       },
       boxShadow: {
-        soft: '0 4px 24px rgba(15, 23, 42, 0.08)',
+        soft: '0 4px 24px rgba(49, 0, 110, 0.08)',
         'soft-dark': '0 4px 24px rgba(0, 0, 0, 0.3)',
       },
     },

@@ -8,12 +8,16 @@ import 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { LogBox, useColorScheme } from 'react-native';
 
 import { AppProviders } from '@/components/AppProviders';
 import { useAppStore } from '@/store/useAppStore';
 
 WebBrowser.maybeCompleteAuthSession();
+
+if (__DEV__) {
+  LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
+}
 
 export default function RootLayout() {
   const systemScheme = useColorScheme();

@@ -35,14 +35,14 @@ export function useTheme() {
           iconMuted: `${BRAND.lavender}99`,
           chrome: `${BRAND.deep}CC`,
           chromeBorder: `${BRAND.lavender}44`,
-          input: '#334155',
+          input: '#3D0E7A',
           inputBorder: `${BRAND.lavender}44`,
-          chip: '#334155',
-          chipBorder: `${BRAND.lavender}22`,
+          chip: '#3D0E7A',
+          chipBorder: `${BRAND.lavender}28`,
           surfaceMuted: BRAND.deepMuted,
           streak: STREAK.flame,
           glow: BRAND.glow,
-          gradientScreen: [BRAND.deep, '#1E0040', BRAND.deepMuted] as const,
+          gradientScreen: [BRAND.deep, '#3D0E7A', BRAND.deepMuted] as const,
         }
       : {
           background: LIGHT.canvas,
