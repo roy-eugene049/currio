@@ -8,7 +8,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "eslint src --max-warnings 0"
+    "lint": "eslint src --max-warnings 0",
+    "supabase": "supabase",
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link --project-ref YOUR_PROJECT_REF",
+    "supabase:setup": "node ./scripts/supabase-setup.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -54,6 +58,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "supabase": "^2.109.0",
     "typescript": "~5.9.2"
   },
   "private": true
