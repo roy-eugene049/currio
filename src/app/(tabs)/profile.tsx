@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip } from '@/components/CategoryChip';
@@ -177,7 +177,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View
-            entering={FadeIn.duration(480)}
+            entering={FadeInDown.duration(480)}
             style={styles.hero}
           >
             <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR SPACE</Text>

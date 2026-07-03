@@ -114,11 +114,11 @@ export function CurioReader({
             bounces={false}
             keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.currioBlock}>
-              <Animated.View
-                key={contentKey ?? curio.id}
-                entering={FadeIn.duration(180)}
-              >
+            <Animated.View
+              key={contentKey ?? curio.id}
+              entering={FadeIn.duration(180)}
+            >
+              <View style={styles.currioBlock}>
                 <Text
                   style={[
                     styles.title,
@@ -135,36 +135,36 @@ export function CurioReader({
                 >
                   {curio.content}
                 </Text>
-              </Animated.View>
 
-              {onNextCurio ? (
-              <Pressable
-                onPress={handleNext}
-                disabled={isLoadingNext}
-                accessibilityRole="button"
-                accessibilityLabel="Show another currio"
-                accessibilityState={{ busy: isLoadingNext }}
-                style={({ pressed }) => [
-                  styles.nextPressable,
-                  pressed && styles.nextPressed,
-                ]}
-              >
-                <Animated.View style={nextButtonStyle}>
-                  <LinearGradient
-                    colors={[brand.electric, brand.deep]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[
-                      styles.nextButton,
-                      isNextReady && styles.nextButtonReady,
+                {onNextCurio ? (
+                  <Pressable
+                    onPress={handleNext}
+                    disabled={isLoadingNext}
+                    accessibilityRole="button"
+                    accessibilityLabel="Show another currio"
+                    accessibilityState={{ busy: isLoadingNext }}
+                    style={({ pressed }) => [
+                      styles.nextPressable,
+                      pressed && styles.nextPressed,
                     ]}
                   >
-                    <Ionicons name="shuffle-outline" size={22} color={brand.mist} />
-                  </LinearGradient>
-                </Animated.View>
-              </Pressable>
-              ) : null}
-            </View>
+                    <Animated.View style={nextButtonStyle}>
+                      <LinearGradient
+                        colors={[brand.electric, brand.deep]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[
+                          styles.nextButton,
+                          isNextReady && styles.nextButtonReady,
+                        ]}
+                      >
+                        <Ionicons name="shuffle-outline" size={22} color={brand.mist} />
+                      </LinearGradient>
+                    </Animated.View>
+                  </Pressable>
+                ) : null}
+              </View>
+            </Animated.View>
           </ScrollView>
         </View>
       </View>

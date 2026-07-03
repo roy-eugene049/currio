@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { streakBackdropForStreak } from '@/constants/streakBackdropImages';
 import type { ProfilePalette } from '@/hooks/useProfilePalette';
@@ -157,7 +157,7 @@ export function ProfileBentoStat({
 
   const content = (
     <Animated.View
-      entering={FadeIn.delay(delay).duration(420)}
+      entering={FadeInDown.delay(delay).duration(420)}
       style={[styles.cell, large ? styles.cellLarge : styles.cellSmall]}
     >
       <View style={tiltStyle}>
