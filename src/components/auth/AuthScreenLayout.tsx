@@ -64,7 +64,9 @@ export function AuthScreenLayout({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <CurrioLogo size={72} color={colors.primary} animate={false} />
+              <View style={styles.logoSlot}>
+                <CurrioLogo size={80} color={colors.primary} animate />
+              </View>
               <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
               <Text style={[styles.subtitle, { color: colors.textMuted }]}>
                 {subtitle}
@@ -125,12 +127,20 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+    alignSelf: 'stretch',
     marginBottom: 28,
+  },
+  logoSlot: {
+    width: 96,
+    height: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   title: {
     fontSize: 30,
     fontWeight: '800',
-    marginTop: 20,
+    marginTop: 12,
     marginBottom: 8,
     textAlign: 'center',
     letterSpacing: -0.5,

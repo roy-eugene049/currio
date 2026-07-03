@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -51,6 +51,8 @@ export function CurioReader({
   const isSavedView = variant === 'saved';
   const categoryIcon = CATEGORY_ICONS[curio.category] as keyof typeof Ionicons.glyphMap;
   const nextScale = useSharedValue(1);
+  const horizontalGutter = Math.max(insets.left, insets.right) + 24;
+  const topChrome = insets.top + (isSavedView ? 64 : 80);
 
   const nextButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: nextScale.value }],
@@ -86,69 +88,86 @@ export function CurioReader({
         <CurioBackdrop theme={theme} imageUrl={backdropUrl} />
       </View>
 
-      <View
-        style={[
-          styles.content,
-          {
-            paddingBottom: isSavedView ? bottomInset + 72 : bottomInset,
-          },
-        ]}
-      >
-        <Animated.View
-          key={curio.id}
-          entering={FadeIn.duration(240)}
-          exiting={FadeOut.duration(160)}
-          style={styles.currioBlock}
+      <View style={[styles.readerStage, { paddingHorizontal: horizontalGutter }]}>
+        <View
+          style={[
+            styles.textStage,
+            {
+              paddingTop: topChrome,
+              paddingBottom: isSavedView ? bottomInset + 72 : 0,
+            },
+          ]}
         >
-          <Text
-            style={[
-              styles.title,
-              { color: theme.textPrimary, textShadowColor: theme.textShadow },
+          <ScrollView
+            style={styles.textScroll}
+            contentContainerStyle={[
+              styles.textScrollContent,
+              { paddingBottom: isSavedView ? 0 : bottomInset + 24 },
             ]}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {curio.title}
-          </Text>
-          <Text
-            style={[
-              styles.body,
-              { color: theme.textSecondary, textShadowColor: theme.textShadow },
-            ]}
-          >
-            {curio.content}
-          </Text>
-        </Animated.View>
+            <Animated.View
+              key={curio.id}
+              entering={FadeIn.duration(240)}
+              exiting={FadeOut.duration(160)}
+            >
+              <View style={styles.currioBlock}>
+                <Text
+                  style={[
+                    styles.title,
+                    { color: theme.textPrimary, textShadowColor: theme.textShadow },
+                  ]}
+                >
+                  {curio.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.body,
+                    { color: theme.textSecondary, textShadowColor: theme.textShadow },
+                  ]}
+                >
+                  {curio.content}
+                </Text>
 
-        {onNextCurio ? (
-          <Pressable
-            onPress={handleNext}
-            disabled={isLoadingNext}
-            accessibilityRole="button"
-            accessibilityLabel="Show another currio"
-            accessibilityState={{ busy: isLoadingNext }}
-            style={({ pressed }) => [styles.nextPressable, pressed && styles.nextPressed]}
-          >
-            <Animated.View style={nextButtonStyle}>
-              <LinearGradient
-                colors={[brand.electric, brand.deep]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  styles.nextButton,
-                  isNextReady && styles.nextButtonReady,
-                ]}
-              >
-                <Ionicons name="shuffle-outline" size={18} color={brand.mist} />
-                <Text style={styles.nextLabel}>Another currio</Text>
-              </LinearGradient>
+                {onNextCurio ? (
+                  <Pressable
+                    onPress={handleNext}
+                    disabled={isLoadingNext}
+                    accessibilityRole="button"
+                    accessibilityLabel="Show another currio"
+                    accessibilityState={{ busy: isLoadingNext }}
+                    style={({ pressed }) => [
+                      styles.nextPressable,
+                      pressed && styles.nextPressed,
+                    ]}
+                  >
+                    <Animated.View style={nextButtonStyle}>
+                      <LinearGradient
+                        colors={[brand.electric, brand.deep]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[
+                          styles.nextButton,
+                          isNextReady && styles.nextButtonReady,
+                        ]}
+                      >
+                        <Ionicons name="shuffle-outline" size={22} color={brand.mist} />
+                      </LinearGradient>
+                    </Animated.View>
+                  </Pressable>
+                ) : null}
+              </View>
             </Animated.View>
-          </Pressable>
-        ) : null}
+          </ScrollView>
+        </View>
       </View>
 
       {isSavedView ? (
         <View
           pointerEvents="box-none"
-          style={[styles.savedTopBar, { paddingTop: insets.top + 12 }]}
+          style={[styles.savedTopBar, { paddingTop: insets.top + 12, paddingHorizontal: horizontalGutter }]}
         >
           {onBack ? (
             <Pressable
@@ -201,7 +220,7 @@ export function CurioReader({
       ) : (
         <View
           pointerEvents="box-none"
-          style={[styles.topBar, { paddingTop: insets.top + 16 }]}
+          style={[styles.topBar, { paddingTop: insets.top + 16, paddingHorizontal: horizontalGutter }]}
         >
           <View style={styles.topLeft}>
             {onBack ? (
@@ -277,24 +296,34 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
   },
-  content: {
+  readerStage: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
     zIndex: 1,
   },
+  textStage: {
+    flex: 1,
+  },
+  textScroll: {
+    flex: 1,
+  },
+  textScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
   currioBlock: {
+    alignSelf: 'center',
     alignItems: 'center',
     width: '100%',
-    maxWidth: 360,
-    marginBottom: 24,
+    maxWidth: 340,
   },
   title: {
     fontSize: 30,
     lineHeight: 38,
     fontWeight: '800',
     textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
     letterSpacing: -0.4,
     marginBottom: 20,
     textShadowOffset: { width: 0, height: 1 },
@@ -305,20 +334,23 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     fontWeight: '500',
     textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   nextPressable: {
+    marginTop: 28,
+    alignSelf: 'center',
     zIndex: 3,
     elevation: 3,
   },
   nextButton: {
-    flexDirection: 'row',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 999,
+    justifyContent: 'center',
     shadowColor: '#6F00FF',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
@@ -328,12 +360,6 @@ const styles = StyleSheet.create({
   nextButtonReady: {
     shadowOpacity: 0.55,
     shadowRadius: 18,
-  },
-  nextLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFF1F1',
-    letterSpacing: 0.2,
   },
   nextPressed: {
     opacity: 0.88,
@@ -347,7 +373,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     paddingBottom: 12,
     zIndex: 2,
   },
@@ -384,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
+    paddingHorizontal: 24,
     paddingBottom: 8,
     zIndex: 2,
   },

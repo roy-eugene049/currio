@@ -26,15 +26,30 @@ export function getCuriosByCategories(categories: Category[]): Curio[] {
   return CURIOS.filter((curio) => categories.includes(curio.category));
 }
 
+function preferDifferentCategory(
+  candidates: Curio[],
+  interests: Category[],
+  excludeCategory?: Category,
+): Curio[] {
+  if (interests.length <= 1 || !excludeCategory) {
+    return candidates;
+  }
+
+  const otherTopics = candidates.filter((curio) => curio.category !== excludeCategory);
+  return otherTopics.length > 0 ? otherTopics : candidates;
+}
+
 /**
  * Picks a random curio from the pool, excluding already-seen IDs.
  * When all curios in the pool have been shown, resets the seen list.
  * Pass excludeId to avoid re-showing the currio the user is currently reading.
+ * With multiple interests, pass excludeCategory to favor a different topic.
  */
 export function pickRandomCurio(
   interests: Category[],
   seenIds: string[],
   excludeId?: string,
+  excludeCategory?: Category,
 ): { curio: Curio; resetSeen: boolean } {
   const pool = getCuriosByCategories(interests);
   if (pool.length === 0) {
@@ -42,7 +57,7 @@ export function pickRandomCurio(
   }
 
   const pickFrom = (candidates: Curio[], resetSeen: boolean) => {
-    let options = candidates;
+    let options = preferDifferentCategory(candidates, interests, excludeCategory);
     if (excludeId && options.length > 1) {
       options = options.filter((curio) => curio.id !== excludeId);
     }

@@ -1,6 +1,7 @@
 export { AnimatedCard } from './AnimatedCard';
 export { AnimatedSplash } from './AnimatedSplash';
 export { CurrioLogo } from './CurrioLogo';
+export { CurrioWordmark, CurrioWordmarkTagline } from './CurrioWordmark';
 export { AppProviders } from './AppProviders';
 export { BookmarkButton } from './BookmarkButton';
 export { CategoryChip } from './CategoryChip';

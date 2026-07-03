@@ -36,7 +36,11 @@ interface AppStore extends AppState {
   recordDailyOpen: () => Promise<void>;
   getTodaysCurio: () => Promise<string>;
   refreshTodaysCurio: () => Promise<string>;
-  pickNextCurio: (excludeCurioId?: string, preferredId?: string) => Promise<string>;
+  pickNextCurio: (
+    excludeCurioId?: string,
+    preferredId?: string,
+    currentCategory?: Category,
+  ) => Promise<string>;
   reconcileForAuthUser: (userId: string) => Promise<void>;
   applySyncedState: (state: AppState) => Promise<void>;
   recordRemoteCurio: (curioId: string, options?: { isDaily?: boolean }) => Promise<void>;
@@ -224,8 +228,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return curio.id;
   },
 
-  pickNextCurio: async (excludeCurioId, preferredId) => {
+  pickNextCurio: async (excludeCurioId, preferredId, currentCategory) => {
     const state = get();
+    const excludeCategory =
+      state.interests.length > 1
+        ? (currentCategory ?? getCurioById(excludeCurioId ?? '')?.category)
+        : undefined;
     let curio;
     let resetSeen = false;
 
@@ -238,13 +246,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
           candidate.id !== excludeCurioId,
       );
 
-      if (preferred && unseen.some((candidate) => candidate.id === preferredId)) {
+      const preferredIsDifferentTopic =
+        !excludeCategory || preferred?.category !== excludeCategory;
+
+      if (
+        preferred &&
+        preferredIsDifferentTopic &&
+        unseen.some((candidate) => candidate.id === preferredId)
+      ) {
         curio = preferred;
       } else {
         ({ curio, resetSeen } = pickRandomCurio(
           state.interests,
           state.seenCurioIds,
           excludeCurioId,
+          excludeCategory,
         ));
       }
     } else {
@@ -252,6 +268,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         state.interests,
         state.seenCurioIds,
         excludeCurioId,
+        excludeCategory,
       ));
     }
 

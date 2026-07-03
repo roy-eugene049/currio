@@ -8,6 +8,7 @@ import {
 } from '@/services/curioApiService';
 import { prepareCurioExperience } from '@/services/curioImageService';
 import {
+  clearPrefetchedNext,
   ensurePrefetchedNext,
   peekPrefetchedNext,
   prefetchNextCurio,
@@ -17,7 +18,7 @@ import {
 import { getCurioById } from '@/services/curioService';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { Curio } from '@/types/curio';
+import type { Category, Curio } from '@/types/curio';
 
 async function loadLocalDailyCurio(
   getTodaysCurio: () => Promise<string>,
@@ -33,6 +34,7 @@ export function useTodaysCurio() {
   const getTodaysCurio = useAppStore((s) => s.getTodaysCurio);
   const pickNextCurio = useAppStore((s) => s.pickNextCurio);
   const recordRemoteCurio = useAppStore((s) => s.recordRemoteCurio);
+  const interests = useAppStore((s) => s.interests);
   const isHydrated = useAppStore((s) => s.isHydrated);
   const session = useAuthStore((s) => s.session);
   const remoteEnabled = isRemoteCuriosEnabled() && Boolean(session);
@@ -73,22 +75,25 @@ export function useTodaysCurio() {
 
   useEffect(() => {
     if (!query.data) return;
-    void prefetchNextCurio(query.data.id);
-  }, [query.data?.id]);
+    void prefetchNextCurio(query.data.id, query.data.category);
+  }, [query.data?.id, query.data?.category]);
 
   const isNextReady = query.data
     ? Boolean(peekPrefetchedNext(query.data.id))
     : false;
 
   const fetchSlowNext = useCallback(
-    async (currentCurioId: string): Promise<Curio> => {
+    async (currentCurioId: string, currentCategory?: Category): Promise<Curio> => {
       if (remoteEnabled) {
-        const curio = await fetchNextCurio(currentCurioId);
+        const interests = useAppStore.getState().interests;
+        const excludeCategory =
+          interests.length > 1 ? currentCategory : undefined;
+        const curio = await fetchNextCurio(currentCurioId, excludeCategory);
         await prepareCurioExperience(curio);
         return curio;
       }
 
-      const id = await pickNextCurio(currentCurioId);
+      const id = await pickNextCurio(currentCurioId, undefined, currentCategory);
       const curio = getCurioById(id);
       if (!curio) throw new Error('Curio not found');
       await prepareCurioExperience(curio);
@@ -107,7 +112,7 @@ export function useTodaysCurio() {
         } else {
           await pickNextCurio(currentCurioId, next.id);
         }
-        await prefetchNextCurio(next.id);
+        await prefetchNextCurio(next.id, next.category);
       })();
     },
     [pickNextCurio, queryClient, queryKey, recordRemoteCurio, remoteEnabled],
@@ -115,15 +120,30 @@ export function useTodaysCurio() {
 
   const loadNext = useCallback(
     async (currentCurioId: string) => {
-      let next = takePrefetchedNext(currentCurioId);
+      const currentCategory = queryClient.getQueryData<Curio>(queryKey)?.category;
+      let next: Curio | null = null;
+      const prefetched = peekPrefetchedNext(currentCurioId);
+
+      if (prefetched) {
+        const sameTopic =
+          interests.length > 1 &&
+          currentCategory &&
+          prefetched.category === currentCategory;
+
+        if (sameTopic) {
+          clearPrefetchedNext();
+        } else {
+          next = takePrefetchedNext(currentCurioId);
+        }
+      }
 
       if (!next) {
         setIsAdvancing(true);
         try {
-          await ensurePrefetchedNext(currentCurioId);
+          await ensurePrefetchedNext(currentCurioId, currentCategory);
           next = takePrefetchedNext(currentCurioId);
           if (!next) {
-            next = await fetchSlowNext(currentCurioId);
+            next = await fetchSlowNext(currentCurioId, currentCategory);
           }
         } finally {
           setIsAdvancing(false);
@@ -133,7 +153,7 @@ export function useTodaysCurio() {
       applyNextCurio(next, currentCurioId);
       return next;
     },
-    [applyNextCurio, fetchSlowNext],
+    [applyNextCurio, fetchSlowNext, interests.length, queryClient, queryKey],
   );
 
   return {

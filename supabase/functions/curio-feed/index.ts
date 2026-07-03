@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const mode = parseMode(url.searchParams.get("mode"));
   const excludeId = url.searchParams.get("excludeId") ?? undefined;
+  const excludeCategoryParam = url.searchParams.get("excludeCategory") ?? undefined;
   const today = new Date().toISOString().slice(0, 10);
 
   const [{ data: interests }, { data: seen }, { data: appState }] =
@@ -64,6 +65,11 @@ Deno.serve(async (req) => {
 
   const categories = interests?.map((row) => row.category) ?? [];
   const seenIds = new Set(seen?.map((row) => row.curio_id) ?? []);
+  const excludeCategory =
+    categories.length > 1
+      ? (excludeCategoryParam ??
+        (excludeId ? await resolveCurioCategory(supabase, excludeId) : undefined))
+      : undefined;
 
   if (
     mode === "daily" &&
@@ -90,6 +96,7 @@ Deno.serve(async (req) => {
     categories,
     seenIds,
     excludeId,
+    excludeCategory,
     authHeader,
     supabaseUrl,
     supabaseAnonKey,
@@ -114,6 +121,7 @@ async function pickAiFirstCurio(input: {
   categories: string[];
   seenIds: Set<string>;
   excludeId?: string;
+  excludeCategory?: string;
   authHeader: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -124,7 +132,7 @@ async function pickAiFirstCurio(input: {
       authHeader: input.authHeader,
       supabaseUrl: input.supabaseUrl,
       supabaseAnonKey: input.supabaseAnonKey,
-      category: pickRandomCategory(input.categories),
+      category: pickRandomCategory(input.categories, input.excludeCategory),
       excludeTitles,
       excludeId: input.excludeId,
     });
@@ -139,7 +147,39 @@ async function pickAiFirstCurio(input: {
     input.categories,
     input.seenIds,
     input.excludeId,
+    input.excludeCategory,
   );
+}
+
+function preferDifferentCategory<T extends { category: string }>(
+  candidates: T[],
+  categories: string[],
+  excludeCategory?: string,
+): T[] {
+  if (!excludeCategory || categories.length <= 1) {
+    return candidates;
+  }
+
+  const otherTopics = candidates.filter((row) => row.category !== excludeCategory);
+  return otherTopics.length > 0 ? otherTopics : candidates;
+}
+
+async function resolveCurioCategory(
+  supabase: SupabaseClient,
+  curioId: string,
+): Promise<string | undefined> {
+  const { data, error } = await supabase
+    .from("curios")
+    .select("category")
+    .eq("id", curioId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("resolveCurioCategory:", error.message);
+    return undefined;
+  }
+
+  return data?.category;
 }
 
 async function pickFromSeedPool(
@@ -147,21 +187,26 @@ async function pickFromSeedPool(
   categories: string[],
   seenIds: Set<string>,
   excludeId?: string,
+  excludeCategory?: string,
 ): Promise<CurioRow | null> {
   const pool = await fetchSeedPool(supabase, categories);
   if (pool.length === 0) return null;
 
-  const unseen = pool.filter(
-    (row) => !seenIds.has(row.id) && row.id !== excludeId,
+  const unseen = preferDifferentCategory(
+    pool.filter((row) => !seenIds.has(row.id) && row.id !== excludeId),
+    categories,
+    excludeCategory,
   );
 
   if (unseen.length > 0) {
     return pickRandom(unseen);
   }
 
-  const repeatable = excludeId
-    ? pool.filter((row) => row.id !== excludeId)
-    : pool;
+  const repeatable = preferDifferentCategory(
+    excludeId ? pool.filter((row) => row.id !== excludeId) : pool,
+    categories,
+    excludeCategory,
+  );
 
   return pickRandom(repeatable);
 }

@@ -14,6 +14,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip } from '@/components/CategoryChip';
+import { AnimatedTabScreen } from '@/components/navigation/AnimatedTabScreen';
 import { getTabBarInset } from '@/components/navigation/FloatingTabBar';
 import { LatestSavedCurrioSnapshot } from '@/components/profile/LatestSavedCurrioSnapshot';
 import { ProfileBentoStat } from '@/components/profile/ProfileBentoStat';
@@ -46,7 +47,7 @@ function OrbitTile({
 }) {
   const content = (
     <Animated.View
-      entering={FadeInDown.delay(delay).duration(450)}
+      entering={FadeInDown.delay(delay).duration(420).springify().damping(18)}
       style={[
         styles.orbitTile,
         {
@@ -142,7 +143,8 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <AnimatedTabScreen tabIndex={1}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
       <LinearGradient
         colors={palette.gradient}
         locations={[0, 0.55, 1]}
@@ -172,7 +174,10 @@ export default function ProfileScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.duration(500)} style={styles.hero}>
+          <Animated.View
+            entering={FadeInDown.duration(480).springify().damping(18)}
+            style={styles.hero}
+          >
             <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR SPACE</Text>
             <View style={styles.heroRow}>
               <LinearGradient
@@ -217,9 +222,10 @@ export default function ProfileScreen() {
               kind="streak"
               icon="flame"
               value={streak}
-              label="day streak"
+              label="Day streak"
+              hint={streak === 1 ? 'Keep it going tomorrow' : 'Days reading in a row'}
               large
-              tilt="-3deg"
+              tilt="-1.5deg"
               delay={120}
               palette={palette}
               isDark={isDark}
@@ -229,8 +235,9 @@ export default function ProfileScreen() {
                 kind="saved"
                 icon="bookmark"
                 value={bookmarks.length}
-                label="saved"
-                tilt="2deg"
+                label="Saved"
+                hint="Your bookmarked currios"
+                tilt="1deg"
                 delay={200}
                 palette={palette}
                 isDark={isDark}
@@ -238,10 +245,11 @@ export default function ProfileScreen() {
               />
               <ProfileBentoStat
                 kind="topics"
-                icon="heart"
+                icon="sparkles"
                 value={interests.length}
-                label="topics"
-                tilt="-2deg"
+                label="Topics"
+                hint="Tap to edit interests"
+                tilt="-1deg"
                 delay={280}
                 palette={palette}
                 isDark={isDark}
@@ -257,16 +265,8 @@ export default function ProfileScreen() {
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
-            {'// preferences'}
+            Preferences
           </Text>
-          <OrbitTile
-            icon="heart-outline"
-            title="Interests"
-            subtitle={`${interests.length} topics in orbit`}
-            onPress={openInterestsEditor}
-            delay={340}
-            palette={palette}
-          />
           <ThemeAppearanceSection
             themeMode={themeMode}
             isOpen={showThemeDrawer}
@@ -274,11 +274,11 @@ export default function ProfileScreen() {
             onSelect={handleThemeSelect}
             palette={palette}
             contentPadding={22}
-            delay={400}
+            delay={240}
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
-            {'// about'}
+            About
           </Text>
           <OrbitTile
             icon="sparkles-outline"
@@ -308,13 +308,16 @@ export default function ProfileScreen() {
           {interests.length > 0 ? (
             <>
               <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
-                {'// orbit'}
+                Your topics
               </Text>
-              <View style={styles.chips}>
+              <Animated.View
+                entering={FadeInDown.delay(120).duration(400)}
+                style={styles.chips}
+              >
                 {interests.map((category) => (
                   <CategoryChip key={category} category={category} size="sm" />
                 ))}
-              </View>
+              </Animated.View>
             </>
           ) : null}
         </ScrollView>
@@ -341,7 +344,8 @@ export default function ProfileScreen() {
           </View>
         </SafeAreaView>
       </Modal>
-    </View>
+      </View>
+    </AnimatedTabScreen>
   );
 }
 
@@ -372,7 +376,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   hero: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   kicker: {
     fontSize: 11,
@@ -432,17 +436,17 @@ const styles = StyleSheet.create({
   bentoGrid: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
-    minHeight: 176,
+    marginBottom: 28,
+    minHeight: 168,
   },
   bentoStack: {
     flex: 1,
     gap: 12,
   },
   sectionTag: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.3,
     marginBottom: 12,
     marginTop: 8,
   },
@@ -470,7 +474,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ rotate: '-8deg' }],
   },
   orbitCopy: {
     flex: 1,

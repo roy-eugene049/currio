@@ -86,13 +86,20 @@ export async function fetchDailyCurio(): Promise<Curio> {
   return callCurioFeed(new URLSearchParams({ mode: 'daily' }));
 }
 
-export async function fetchNextCurio(excludeId: string): Promise<Curio> {
-  return callCurioFeed(
-    new URLSearchParams({
-      mode: 'next',
-      excludeId,
-    }),
-  );
+export async function fetchNextCurio(
+  excludeId: string,
+  excludeCategory?: Category,
+): Promise<Curio> {
+  const params = new URLSearchParams({
+    mode: 'next',
+    excludeId,
+  });
+
+  if (excludeCategory) {
+    params.set('excludeCategory', excludeCategory);
+  }
+
+  return callCurioFeed(params);
 }
 
 export async function fetchCurioById(id: string): Promise<Curio | null> {

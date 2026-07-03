@@ -7,17 +7,27 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  beginTabTransition,
+  getCommittedTabIndex,
+  syncTabIndex,
+  TAB_ROUTE_INDEX,
+  TAB_TRANSITION_EASING,
+  TAB_TRANSITION_MS,
+  TAB_WIDTH,
+} from '@/components/navigation/tabTransition';
 import { useTheme } from '@/hooks/useTheme';
 import { BRAND } from '@/theme/brand';
 
 export const DOCK_HEIGHT = 68;
 export const DOCK_BOTTOM_MARGIN = 16;
 export const DOCK_HORIZONTAL_PADDING = 8;
-export const TAB_WIDTH = 72;
+export { TAB_WIDTH };
+
 const INDICATOR_HEIGHT = DOCK_HEIGHT - 16;
 
 const TAB_CONFIG = {
@@ -27,6 +37,44 @@ const TAB_CONFIG = {
 
 export function getTabBarInset(insetsBottom: number): number {
   return DOCK_HEIGHT + DOCK_BOTTOM_MARGIN + Math.max(insetsBottom, 8);
+}
+
+function TabIcon({
+  focused,
+  icon,
+  iconOutline,
+  activeColor,
+  inactiveColor,
+}: {
+  focused: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconOutline: keyof typeof Ionicons.glyphMap;
+  activeColor: string;
+  inactiveColor: string;
+}) {
+  const focus = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    focus.value = withTiming(focused ? 1 : 0, {
+      duration: TAB_TRANSITION_MS,
+      easing: TAB_TRANSITION_EASING,
+    });
+  }, [focus, focused]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.92 + focus.value * 0.12 }],
+    opacity: 0.55 + focus.value * 0.45,
+  }));
+
+  return (
+    <Animated.View style={iconStyle}>
+      <Ionicons
+        name={(focused ? icon : iconOutline) as keyof typeof Ionicons.glyphMap}
+        size={24}
+        color={focused ? activeColor : inactiveColor}
+      />
+    </Animated.View>
+  );
 }
 
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
@@ -43,10 +91,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const indicatorX = useSharedValue(activeRouteIndex * TAB_WIDTH);
 
   useEffect(() => {
-    indicatorX.value = withSpring(activeRouteIndex * TAB_WIDTH, {
-      damping: 18,
-      stiffness: 220,
-    });
+    if (activeRouteIndex === getCommittedTabIndex()) return;
+
+    syncTabIndex(activeRouteIndex);
+    indicatorX.value = activeRouteIndex * TAB_WIDTH;
   }, [activeRouteIndex, indicatorX]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
@@ -91,6 +139,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                   const index = state.routes.indexOf(route);
                   const isFocused = state.index === index;
                   const config = TAB_CONFIG[route.name as keyof typeof TAB_CONFIG];
+                  const tabIndex = TAB_ROUTE_INDEX[route.name] ?? index;
 
                   const onPress = () => {
                     const event = navigation.emit({
@@ -99,6 +148,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                       canPreventDefault: true,
                     });
                     if (!isFocused && !event.defaultPrevented) {
+                      beginTabTransition(tabIndex, indicatorX);
                       navigation.navigate(route.name);
                     }
                   };
@@ -112,12 +162,12 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                       accessibilityState={{ selected: isFocused }}
                       accessibilityLabel={config.label}
                     >
-                      <Ionicons
-                        name={
-                          (isFocused ? config.icon : config.iconOutline) as keyof typeof Ionicons.glyphMap
-                        }
-                        size={24}
-                        color={isFocused ? BRAND.mist : colors.iconMuted}
+                      <TabIcon
+                        focused={isFocused}
+                        icon={config.icon}
+                        iconOutline={config.iconOutline}
+                        activeColor={BRAND.mist}
+                        inactiveColor={colors.iconMuted}
                       />
                     </Pressable>
                   );

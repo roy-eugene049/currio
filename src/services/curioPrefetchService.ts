@@ -1,9 +1,7 @@
 import { fetchNextCurio, isRemoteCuriosEnabled } from '@/services/curioApiService';
 import { prepareCurioExperience } from '@/services/curioImageService';
 import { pickRandomCurio } from '@/services/curioService';
-import { useAppStore } from '@/store/useAppStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import type { Curio } from '@/types/curio';
+import type { Category, Curio } from '@/types/curio';
 
 type PrefetchedSlot = {
   forCurioId: string;
@@ -42,31 +40,48 @@ export function peekPrefetchedNext(forCurioId: string): Curio | null {
   return slot.nextCurio;
 }
 
-async function resolveLocalPrefetch(forCurioId: string): Promise<Curio> {
+async function resolveLocalPrefetch(
+  forCurioId: string,
+  currentCategory?: Category,
+): Promise<Curio> {
+  const { useAppStore } = await import('@/store/useAppStore');
   const state = useAppStore.getState();
+  const excludeCategory =
+    state.interests.length > 1 ? currentCategory : undefined;
   const { curio } = pickRandomCurio(
     state.interests,
     state.seenCurioIds,
     forCurioId,
+    excludeCategory,
   );
   await prepareCurioExperience(curio);
   return curio;
 }
 
-async function resolveRemotePrefetch(forCurioId: string): Promise<Curio> {
+async function resolveRemotePrefetch(
+  forCurioId: string,
+  currentCategory?: Category,
+): Promise<Curio> {
+  const { useAppStore } = await import('@/store/useAppStore');
+  const interests = useAppStore.getState().interests;
+  const excludeCategory = interests.length > 1 ? currentCategory : undefined;
+
   try {
-    const curio = await fetchNextCurio(forCurioId);
+    const curio = await fetchNextCurio(forCurioId, excludeCategory);
     await prepareCurioExperience(curio);
     return curio;
   } catch {
-    return resolveLocalPrefetch(forCurioId);
+    return resolveLocalPrefetch(forCurioId, currentCategory);
   }
 }
 
 /**
  * Picks the next curio and preloads its backdrop while the user reads the current one.
  */
-export async function prefetchNextCurio(forCurioId: string): Promise<Curio | null> {
+export async function prefetchNextCurio(
+  forCurioId: string,
+  currentCategory?: Category,
+): Promise<Curio | null> {
   if (slot?.forCurioId === forCurioId) return slot.nextCurio;
 
   if (inflightPrefetch?.forCurioId === forCurioId) {
@@ -74,12 +89,13 @@ export async function prefetchNextCurio(forCurioId: string): Promise<Curio | nul
   }
 
   const task = (async () => {
+    const { useAuthStore } = await import('@/store/useAuthStore');
     const remoteEnabled =
       isRemoteCuriosEnabled() && Boolean(useAuthStore.getState().session);
 
     const curio = remoteEnabled
-      ? await resolveRemotePrefetch(forCurioId)
-      : await resolveLocalPrefetch(forCurioId);
+      ? await resolveRemotePrefetch(forCurioId, currentCategory)
+      : await resolveLocalPrefetch(forCurioId, currentCategory);
 
     slot = { forCurioId, nextCurio: curio };
     notifyPrefetchListeners();
@@ -98,8 +114,11 @@ export async function prefetchNextCurio(forCurioId: string): Promise<Curio | nul
 }
 
 /** Wait for an in-flight prefetch or start one. */
-export async function ensurePrefetchedNext(forCurioId: string): Promise<Curio | null> {
+export async function ensurePrefetchedNext(
+  forCurioId: string,
+  currentCategory?: Category,
+): Promise<Curio | null> {
   const ready = peekPrefetchedNext(forCurioId);
   if (ready) return ready;
-  return prefetchNextCurio(forCurioId);
+  return prefetchNextCurio(forCurioId, currentCategory);
 }

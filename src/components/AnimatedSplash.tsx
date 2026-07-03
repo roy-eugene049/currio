@@ -1,23 +1,22 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 
-import { CurrioLogo } from '@/components/CurrioLogo';
-import { useTheme } from '@/hooks/useTheme';
+import { CurrioWordmark, CurrioWordmarkTagline } from '@/components/CurrioWordmark';
+import { BRAND } from '@/theme/brand';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Splash may already be hidden in dev fast refresh
 });
 
-const MIN_SPLASH_MS = 2200;
+const MIN_SPLASH_MS = 2600;
 
 interface AnimatedSplashProps {
   ready: boolean;
@@ -25,13 +24,12 @@ interface AnimatedSplashProps {
 }
 
 export function AnimatedSplash({ ready, onComplete }: AnimatedSplashProps) {
-  const { colors } = useTheme();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(16);
-  const taglineOpacity = useSharedValue(0);
   const screenOpacity = useSharedValue(1);
+  const wordmarkScale = useSharedValue(1);
+  const wordmarkOpacity = useSharedValue(1);
+  const taglineOpacity = useSharedValue(1);
 
   useEffect(() => {
     const timer = setTimeout(() => setMinTimeElapsed(true), MIN_SPLASH_MS);
@@ -40,66 +38,84 @@ export function AnimatedSplash({ ready, onComplete }: AnimatedSplashProps) {
 
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
-
-    titleOpacity.value = withDelay(
-      400,
-      withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }),
-    );
-    titleTranslateY.value = withDelay(
-      400,
-      withTiming(0, { duration: 600, easing: Easing.out(Easing.cubic) }),
-    );
-    taglineOpacity.value = withDelay(
-      800,
-      withTiming(1, { duration: 500, easing: Easing.out(Easing.quad) }),
-    );
-  }, [taglineOpacity, titleOpacity, titleTranslateY]);
+  }, []);
 
   useEffect(() => {
     if (!ready || !minTimeElapsed) return;
 
+    taglineOpacity.value = withTiming(0, {
+      duration: 380,
+      easing: Easing.in(Easing.quad),
+    });
+
+    wordmarkScale.value = withTiming(1.05, {
+      duration: 480,
+      easing: Easing.inOut(Easing.cubic),
+    });
+
+    wordmarkOpacity.value = withTiming(0, {
+      duration: 480,
+      easing: Easing.inOut(Easing.cubic),
+    });
+
     screenOpacity.value = withTiming(
       0,
-      { duration: 450, easing: Easing.inOut(Easing.quad) },
+      { duration: 480, easing: Easing.inOut(Easing.cubic) },
       (finished) => {
         if (finished) runOnJS(onComplete)();
       },
     );
-  }, [minTimeElapsed, onComplete, ready, screenOpacity]);
+  }, [
+    minTimeElapsed,
+    onComplete,
+    ready,
+    screenOpacity,
+    taglineOpacity,
+    wordmarkOpacity,
+    wordmarkScale,
+  ]);
 
   const screenStyle = useAnimatedStyle(() => ({
     opacity: screenOpacity.value,
   }));
 
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
+  const wordmarkWrapStyle = useAnimatedStyle(() => ({
+    opacity: wordmarkOpacity.value,
+    transform: [{ scale: wordmarkScale.value }],
   }));
 
-  const taglineStyle = useAnimatedStyle(() => ({
+  const taglineWrapStyle = useAnimatedStyle(() => ({
     opacity: taglineOpacity.value,
   }));
 
   return (
-    <Animated.View
-      className="flex-1 items-center justify-center px-8"
-      style={[{ backgroundColor: colors.background }, screenStyle]}
-    >
-      <View className="items-center gap-6">
-        <CurrioLogo size={140} color={colors.primary} />
-        <Animated.Text
-          style={[{ color: colors.text }, titleStyle]}
-          className="text-4xl font-bold tracking-tight"
-        >
-          Currio
-        </Animated.Text>
-        <Animated.Text
-          style={[{ color: colors.textMuted }, taglineStyle]}
-          className="text-base text-center leading-6"
-        >
-          Learn something new every day
-        </Animated.Text>
-      </View>
+    <Animated.View style={[styles.root, screenStyle]}>
+      <View style={styles.background} />
+
+      <Animated.View style={[styles.content, wordmarkWrapStyle]}>
+        <CurrioWordmark size={68} animate />
+        <Animated.View style={taglineWrapStyle}>
+          <CurrioWordmarkTagline animate />
+        </Animated.View>
+      </Animated.View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BRAND.electric,
+  },
+  background: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: BRAND.electric,
+  },
+  content: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+});

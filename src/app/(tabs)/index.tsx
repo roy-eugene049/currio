@@ -4,28 +4,32 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CurioReader } from '@/components/home/CurioReader';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { AnimatedTabScreen } from '@/components/navigation/AnimatedTabScreen';
 import { getTabBarInset } from '@/components/navigation/FloatingTabBar';
 import { ScreenBackground } from '@/components/ScreenBackground';
+import { useTheme } from '@/hooks/useTheme';
 import { useTodaysCurio } from '@/hooks/useTodaysCurio';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { data: curio, isLoading, isError, loadNext, isLoadingNext, isNextReady } =
     useTodaysCurio();
 
   const bottomInset = getTabBarInset(insets.bottom);
 
   return (
-    <View style={styles.root}>
-      {isLoading && (
+    <AnimatedTabScreen tabIndex={0}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        {isLoading && (
         <ScreenBackground>
           <SafeAreaView style={styles.safe}>
             <LoadingSkeleton />
           </SafeAreaView>
         </ScreenBackground>
-      )}
+        )}
 
-      {isError && (
+        {isError && (
         <ScreenBackground>
           <SafeAreaView style={styles.safe}>
             <EmptyState
@@ -35,9 +39,9 @@ export default function HomeScreen() {
             />
           </SafeAreaView>
         </ScreenBackground>
-      )}
+        )}
 
-      {curio && !isLoading && (
+        {curio && !isLoading && (
         <CurioReader
           curio={curio}
           bottomInset={bottomInset}
@@ -45,8 +49,9 @@ export default function HomeScreen() {
           isLoadingNext={isLoadingNext}
           isNextReady={isNextReady}
         />
-      )}
-    </View>
+        )}
+      </View>
+    </AnimatedTabScreen>
   );
 }
 

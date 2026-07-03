@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
+import { streakBackdropForStreak } from '@/constants/streakBackdropImages';
 import type { ProfilePalette } from '@/hooks/useProfilePalette';
 import { BRAND } from '@/theme/brand';
 import { STREAK } from '@/theme/streak';
@@ -15,8 +18,9 @@ interface ProfileBentoStatProps {
   icon: keyof typeof Ionicons.glyphMap;
   value: string | number;
   label: string;
+  hint?: string;
   large?: boolean;
-  tilt: string;
+  tilt?: string;
   delay: number;
   palette: ProfilePalette;
   isDark: boolean;
@@ -26,28 +30,28 @@ interface ProfileBentoStatProps {
 const STAT_THEMES: Record<
   StatKind,
   {
-    border: [string, string, string];
+    border: [string, string];
     iconGradient: [string, string];
-    glow: string;
+    ambient: string;
     iconColor: string;
   }
 > = {
   streak: {
-    border: ['#FF7A45', '#FF9F4333', '#FFB347'],
+    border: [STREAK.flame, STREAK.flameLight],
     iconGradient: [...STREAK.gradient],
-    glow: STREAK.bgDark,
+    ambient: STREAK.bgDark,
     iconColor: '#FFF8F3',
   },
   saved: {
-    border: [BRAND.electric, '#B06BFF', BRAND.lavender],
-    iconGradient: [BRAND.electric, '#9B4DFF'],
-    glow: `${BRAND.electric}40`,
+    border: [BRAND.electric, BRAND.lavender],
+    iconGradient: [BRAND.electric, '#8B3DFF'],
+    ambient: `${BRAND.electric}28`,
     iconColor: BRAND.mist,
   },
   topics: {
-    border: ['#FF6B9D', BRAND.lavender, `${BRAND.electric}AA`],
-    iconGradient: ['#FF6B9D', BRAND.lavender],
-    glow: `${BRAND.lavender}55`,
+    border: [BRAND.lavender, `${BRAND.electric}99`],
+    iconGradient: ['#E879F9', BRAND.lavender],
+    ambient: `${BRAND.lavender}40`,
     iconColor: BRAND.deep,
   },
 };
@@ -57,22 +61,104 @@ export function ProfileBentoStat({
   icon,
   value,
   label,
+  hint,
   large,
-  tilt,
+  tilt = '0deg',
   delay,
   palette,
   isDark,
   onPress,
 }: ProfileBentoStatProps) {
   const accent = STAT_THEMES[kind];
+  const isStreakHero = kind === 'streak' && large;
+  const streakBackdrop = isStreakHero
+    ? streakBackdropForStreak(typeof value === 'number' ? value : 0)
+    : null;
+
+  const valueColor = isStreakHero ? '#FFF8F3' : palette.bentoValue;
+  const labelColor = isStreakHero ? 'rgba(255, 248, 243, 0.92)' : palette.bentoLabel;
+  const hintColor = isStreakHero ? 'rgba(255, 248, 243, 0.78)' : palette.tileSubtitle;
+
+  const cardBody = (
+    <View style={[styles.inner, !isStreakHero && { backgroundColor: palette.bentoInner }]}>
+      {isStreakHero && streakBackdrop ? (
+        <>
+          <Image
+            source={{ uri: streakBackdrop }}
+            style={styles.backdropImage}
+            contentFit="cover"
+            transition={320}
+            cachePolicy="memory-disk"
+          />
+          <LinearGradient
+            colors={[
+              'rgba(40, 8, 0, 0.25)',
+              'rgba(180, 55, 0, 0.52)',
+              'rgba(25, 5, 0, 0.88)',
+            ]}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0, 0, 0, 0.45)']}
+            style={styles.backdropVignette}
+          />
+        </>
+      ) : (
+        <View
+          style={[
+            styles.ambient,
+            large ? styles.ambientLarge : styles.ambientSmall,
+            { backgroundColor: accent.ambient },
+          ]}
+        />
+      )}
+
+      <View style={styles.topRow}>
+        <LinearGradient
+          colors={accent.iconGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.iconRing, large && styles.iconRingLarge]}
+        >
+          <Ionicons name={icon} size={large ? 24 : 17} color={accent.iconColor} />
+        </LinearGradient>
+
+        {onPress ? (
+          <View style={[styles.actionBadge, { backgroundColor: palette.iconWrapBg }]}>
+            <Ionicons name="arrow-forward" size={14} color={palette.bentoLabel} />
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.copy}>
+        <Text
+          style={[
+            styles.value,
+            large && styles.valueLarge,
+            { color: valueColor },
+            isStreakHero && styles.valueOnFire,
+          ]}
+        >
+          {value}
+        </Text>
+        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+        {hint ? (
+          <Text style={[styles.hint, { color: hintColor }]} numberOfLines={2}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
 
   const content = (
     <Animated.View
-      entering={FadeInUp.delay(delay).duration(500).springify().damping(16)}
+      entering={FadeInUp.delay(delay).duration(480).springify().damping(18)}
       style={[
         styles.cell,
-        large && styles.cellLarge,
-        { transform: [{ rotate: tilt }] },
+        large ? styles.cellLarge : styles.cellSmall,
+        tilt !== '0deg' ? { transform: [{ rotate: tilt }] } : null,
       ]}
     >
       <LinearGradient
@@ -81,52 +167,17 @@ export function ProfileBentoStat({
         end={{ x: 1, y: 1 }}
         style={styles.border}
       >
-        <BlurView intensity={isDark ? 48 : 72} tint={palette.blurTint} style={styles.blur}>
-          <View style={[styles.inner, { backgroundColor: palette.bentoInner }]}>
-            <View
-              style={[
-                styles.glowOrb,
-                large ? styles.glowOrbLarge : styles.glowOrbSmall,
-                { backgroundColor: accent.glow },
-              ]}
-            />
-            <LinearGradient
-              colors={[`${accent.border[0]}33`, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.shine}
-            />
-
-            <View style={[styles.topRow, large && styles.topRowLarge]}>
-              <LinearGradient
-                colors={accent.iconGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.iconRing, large && styles.iconRingLarge]}
-              >
-                <Ionicons name={icon} size={large ? 26 : 18} color={accent.iconColor} />
-              </LinearGradient>
-              {large ? (
-                <Text style={[styles.kindTag, { color: palette.bentoLabel }]}>
-                  {kind === 'streak' ? 'ON FIRE' : ''}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={styles.copy}>
-              <Text
-                style={[
-                  styles.value,
-                  large && styles.valueLarge,
-                  { color: palette.bentoValue },
-                ]}
-              >
-                {value}
-              </Text>
-              <Text style={[styles.label, { color: palette.bentoLabel }]}>{label}</Text>
-            </View>
-          </View>
-        </BlurView>
+        {isStreakHero ? (
+          <View style={styles.clip}>{cardBody}</View>
+        ) : (
+          <BlurView
+            intensity={isDark ? 36 : 56}
+            tint={palette.blurTint}
+            style={styles.blur}
+          >
+            {cardBody}
+          </BlurView>
+        )}
       </LinearGradient>
     </Animated.View>
   );
@@ -134,7 +185,10 @@ export function ProfileBentoStat({
   if (onPress) {
     return (
       <Pressable
-        onPress={onPress}
+        onPress={() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          onPress();
+        }}
         accessibilityRole="button"
         accessibilityLabel={`${value} ${label}`}
         style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
@@ -144,7 +198,7 @@ export function ProfileBentoStat({
     );
   }
 
-  return content;
+  return <View style={styles.pressable}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -152,50 +206,62 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }],
   },
   cell: {
     flex: 1,
   },
   cellLarge: {
-    flex: 1.1,
+    minHeight: 168,
+  },
+  cellSmall: {
+    minHeight: 78,
   },
   border: {
     flex: 1,
-    borderRadius: 24,
-    padding: 1.5,
+    borderRadius: 20,
+    padding: 1,
   },
   blur: {
     flex: 1,
-    borderRadius: 22.5,
+    borderRadius: 19,
+    overflow: 'hidden',
+  },
+  clip: {
+    flex: 1,
+    borderRadius: 19,
     overflow: 'hidden',
   },
   inner: {
     flex: 1,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     overflow: 'hidden',
     justifyContent: 'space-between',
   },
-  glowOrb: {
+  backdropImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropVignette: {
+    ...StyleSheet.absoluteFillObject,
+    top: '50%',
+  },
+  ambient: {
     position: 'absolute',
     borderRadius: 999,
   },
-  glowOrbLarge: {
-    width: 120,
-    height: 120,
-    top: -36,
-    right: -28,
+  ambientLarge: {
+    width: 100,
+    height: 100,
+    top: -30,
+    right: -24,
   },
-  glowOrbSmall: {
-    width: 72,
-    height: 72,
-    top: -22,
-    right: -16,
-  },
-  shine: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
+  ambientSmall: {
+    width: 64,
+    height: 64,
+    top: -18,
+    right: -14,
   },
   topRow: {
     flexDirection: 'row',
@@ -203,50 +269,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 1,
   },
-  topRowLarge: {
-    marginBottom: 4,
-  },
   iconRing: {
-    width: 36,
-    height: 36,
-    borderRadius: 13,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: BRAND.electric,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
   },
   iconRingLarge: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
   },
-  kindTag: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.8,
+  actionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   copy: {
     zIndex: 1,
-    gap: 2,
+    gap: 3,
+    marginTop: 8,
   },
   value: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
-    letterSpacing: -1.2,
-    lineHeight: 30,
+    letterSpacing: -1,
+    lineHeight: 28,
   },
   valueLarge: {
-    fontSize: 40,
-    lineHeight: 42,
-    letterSpacing: -1.6,
+    fontSize: 38,
+    lineHeight: 40,
+    letterSpacing: -1.4,
+  },
+  valueOnFire: {
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0.2,
+  },
+  hint: {
+    fontSize: 10,
+    fontWeight: '500',
+    lineHeight: 14,
+    marginTop: 2,
   },
 });
