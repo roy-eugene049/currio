@@ -59,7 +59,7 @@ export function BookmarkButton({
       style={animatedStyle}
       hitSlop={12}
       accessibilityRole="button"
-      accessibilityLabel={bookmarked ? 'Remove bookmark' : 'Add bookmark'}
+      accessibilityLabel={bookmarked ? 'Remove from saves' : 'Save for later'}
     >
       <Ionicons
         name={bookmarked ? 'bookmark' : 'bookmark-outline'}

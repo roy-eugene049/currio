@@ -40,9 +40,35 @@ export function getUserInitials(user: User | null): string {
 }
 
 export function getMemberSince(user: User | null): string {
-  if (!user?.created_at) return 'Recently joined';
-  return new Date(user.created_at).toLocaleDateString('en-US', {
-    month: 'long',
+  if (!user?.created_at) return 'New to Currio';
+
+  const joined = new Date(user.created_at);
+  if (Number.isNaN(joined.getTime())) return 'New to Currio';
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfJoined = new Date(
+    joined.getFullYear(),
+    joined.getMonth(),
+    joined.getDate(),
+  );
+  const daysAgo = Math.floor(
+    (startOfToday.getTime() - startOfJoined.getTime()) / 86_400_000,
+  );
+
+  if (daysAgo <= 0) return 'Joined today';
+  if (daysAgo === 1) return 'Joined yesterday';
+  if (daysAgo < 7) return `Joined ${daysAgo} days ago`;
+
+  if (joined.getFullYear() === now.getFullYear()) {
+    return `Joined ${joined.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })}`;
+  }
+
+  return `Joined ${joined.toLocaleDateString('en-US', {
+    month: 'short',
     year: 'numeric',
-  });
+  })}`;
 }

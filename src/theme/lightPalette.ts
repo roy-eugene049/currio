@@ -30,6 +30,6 @@ export const LIGHT = {
     auth: [BRAND.mist, '#F8EBFF', '#F3E0FF'] as const,
     profile: [BRAND.mist, '#F9EDFF', '#F0DFFF'] as const,
     bookmarks: [BRAND.mist, '#F7EAFF', '#EDE0FF'] as const,
-    welcome: [BRAND.mist, '#FAF0FF', BRAND.lavender] as const,
+    welcome: [BRAND.mist, '#FAF0FF', '#F5E8FF'] as const,
   },
 } as const;

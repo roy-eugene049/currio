@@ -94,6 +94,10 @@ export default function WelcomeScreen() {
     opacity: ringOpacity.value,
   }));
 
+  const headlineAccentColor = isDark ? BRAND.lavender : BRAND.deep;
+  const curioWordColor = isDark ? BRAND.lavender : BRAND.deep;
+  const bodyColor = isDark ? colors.textMuted : light.textSecondary;
+
   const handleContinue = async () => {
     await completeWelcome();
     router.replace('/(tabs)' as Href);
@@ -123,7 +127,7 @@ export default function WelcomeScreen() {
           style={[
             styles.orb,
             styles.orbLeft,
-            { backgroundColor: BRAND.lavender, opacity: isDark ? 0.12 : 0.35 },
+            { backgroundColor: BRAND.lavender, opacity: isDark ? 0.12 : 0.16 },
           ]}
         />
         <View
@@ -148,26 +152,32 @@ export default function WelcomeScreen() {
                 colors={
                   isDark
                     ? [`${BRAND.electric}50`, `${BRAND.electric}10`, 'transparent']
-                    : [`${BRAND.lavender}`, `${BRAND.electric}28`, 'transparent']
+                    : [`${BRAND.mint}`, `${BRAND.lavender}35`, 'transparent']
                 }
                 style={styles.glowGradient}
               />
             </Animated.View>
-            <CurrioLogo size={88} color={isDark ? BRAND.lavender : BRAND.electric} animate />
+            <CurrioLogo
+              size={88}
+              color={isDark ? BRAND.lavender : BRAND.deep}
+              animate
+            />
           </Animated.View>
 
           <Animated.View entering={FadeInUp.delay(180).duration(580)} style={styles.copy}>
             <View style={styles.headlineBlock}>
               <Text style={[styles.headline, { color: colors.text }]}>Welcome,</Text>
               <View style={styles.nameRow}>
-                <Text style={styles.headlineAccent}>{firstName}</Text>
+                <Text style={[styles.headlineAccent, { color: headlineAccentColor }]}>
+                  {firstName}
+                </Text>
                 <ExcitedEmoji />
               </View>
             </View>
 
-            <Text style={[styles.body, { color: colors.textMuted }]}>
+            <Text style={[styles.body, { color: bodyColor }]}>
               You&apos;re all set — your{' '}
-              <Text style={[styles.curioWord, { color: BRAND.electric }]}>first currio</Text>
+              <Text style={[styles.curioWord, { color: curioWordColor }]}>first currio</Text>
               {' '}is waiting!
             </Text>
           </Animated.View>
@@ -316,7 +326,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headlineAccent: {
-    color: BRAND.electric,
     fontSize: 40,
     fontWeight: '900',
     letterSpacing: -1,

@@ -214,7 +214,7 @@ export default function ProfileScreen() {
                   ]}
                 >
                   <Text style={[styles.memberText, { color: palette.memberText }]}>
-                    since {memberSince}
+                    {memberSince}
                   </Text>
                 </View>
               </View>

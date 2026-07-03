@@ -67,7 +67,7 @@ export function LatestSavedCurrioSnapshot({
               No saved currios yet
             </Text>
             <Text style={[styles.emptyBody, { color: palette.tileSubtitle }]}>
-              Bookmark currios from home — they&apos;ll show up here.
+              Tap the bookmark icon while reading — saved curios appear here.
             </Text>
           </View>
         </Pressable>
