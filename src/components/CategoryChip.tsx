@@ -46,17 +46,24 @@ export function CategoryChip({
       style={[
         animatedStyle,
         {
-          backgroundColor: selected
-            ? colors.primary
-            : isDark
-              ? '#334155'
-              : '#F1F5F9',
+          backgroundColor: selected ? colors.primary : colors.chip,
+          borderWidth: selected ? 0 : 1,
+          borderColor: colors.chipBorder,
           paddingHorizontal: size === 'sm' ? 12 : 16,
           paddingVertical: size === 'sm' ? 6 : 12,
           borderRadius: 9999,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
+          ...(selected || isDark
+            ? {}
+            : {
+                shadowColor: '#3B0270',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+                elevation: 2,
+              }),
         },
       ]}
       accessibilityRole="button"

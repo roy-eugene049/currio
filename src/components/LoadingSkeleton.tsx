@@ -1,25 +1,55 @@
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { useTheme } from '@/hooks/useTheme';
 
 export function LoadingSkeleton() {
-  const { isDark } = useTheme();
-  const bg = isDark ? '#334155' : '#E2E8F0';
+  const { colors, isDark } = useTheme();
+  const bg = isDark ? colors.input : colors.surfaceMuted;
 
   return (
-    <View className="gap-4">
-      <View className="h-8 w-32 rounded-full" style={{ backgroundColor: bg }} />
-      <View
-        className="rounded-card p-6 gap-4"
-        style={{ backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }}
-      >
-        <View className="h-6 w-24 rounded-full" style={{ backgroundColor: bg }} />
-        <View className="h-10 w-full rounded-lg" style={{ backgroundColor: bg }} />
-        <View className="h-32 w-full rounded-2xl" style={{ backgroundColor: bg }} />
-        <View className="h-4 w-full rounded" style={{ backgroundColor: bg }} />
-        <View className="h-4 w-full rounded" style={{ backgroundColor: bg }} />
-        <View className="h-4 w-3/4 rounded" style={{ backgroundColor: bg }} />
-      </View>
-    </View>
+    <Animated.View entering={FadeIn.duration(400)} style={styles.container}>
+      <View style={[styles.block, styles.hero, { backgroundColor: bg }]} />
+      <View style={[styles.block, styles.title, { backgroundColor: bg }]} />
+      <View style={[styles.block, styles.line, { backgroundColor: bg }]} />
+      <View style={[styles.block, styles.lineShort, { backgroundColor: bg }]} />
+      <View style={[styles.block, styles.card, { backgroundColor: bg }]} />
+    </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    gap: 16,
+  },
+  block: {
+    borderRadius: 16,
+    opacity: 0.55,
+  },
+  hero: {
+    height: 120,
+    borderRadius: 24,
+    marginBottom: 8,
+  },
+  title: {
+    height: 32,
+    width: '70%',
+    borderRadius: 12,
+  },
+  line: {
+    height: 18,
+    width: '100%',
+  },
+  lineShort: {
+    height: 18,
+    width: '85%',
+  },
+  card: {
+    flex: 1,
+    borderRadius: 24,
+    marginTop: 8,
+  },
+});

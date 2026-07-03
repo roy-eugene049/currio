@@ -70,7 +70,11 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             <View
               style={[
                 styles.dockInner,
-                { backgroundColor: isDark ? `${BRAND.deep}DD` : `${BRAND.mist}F0` },
+                {
+                  backgroundColor: isDark ? `${BRAND.deep}DD` : colors.chrome,
+                  borderWidth: isDark ? 0 : 1,
+                  borderColor: colors.chromeBorder,
+                },
               ]}
             >
               <View style={styles.tabsTrack}>
@@ -113,7 +117,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                           (isFocused ? config.icon : config.iconOutline) as keyof typeof Ionicons.glyphMap
                         }
                         size={24}
-                        color={isFocused ? BRAND.mist : colors.icon}
+                        color={isFocused ? BRAND.mist : colors.iconMuted}
                       />
                     </Pressable>
                   );

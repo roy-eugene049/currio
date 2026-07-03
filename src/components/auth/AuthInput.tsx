@@ -70,8 +70,8 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
         style={[
           styles.inputWrapper,
           {
-            backgroundColor: isDark ? '#334155' : '#F1F5F9',
-            borderColor: isFocused ? colors.primary : colors.border,
+            backgroundColor: isDark ? colors.input : colors.input,
+            borderColor: isFocused ? colors.primary : colors.inputBorder,
           },
         ]}
       >

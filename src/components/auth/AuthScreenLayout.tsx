@@ -30,7 +30,7 @@ export function AuthScreenLayout({
   children,
   footer,
 }: AuthScreenLayoutProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, light } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -38,13 +38,14 @@ export function AuthScreenLayout({
       <LinearGradient
         colors={
           isDark
-            ? [BRAND.deep, '#1E0040', BRAND.deepMuted]
-            : [BRAND.mist, '#F5E8F8', BRAND.mist]
+            ? [colors.gradientScreen[0], colors.gradientScreen[1], colors.gradientScreen[2]]
+            : [...light.gradient.auth]
         }
+        locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[styles.orb, styles.orbOne, { opacity: isDark ? 0.14 : 0.08 }]} />
-      <View style={[styles.orb, styles.orbTwo, { opacity: isDark ? 0.1 : 0.06 }]} />
+      <View style={[styles.orb, styles.orbOne, { opacity: isDark ? 0.14 : 0.1 }]} />
+      <View style={[styles.orb, styles.orbTwo, { opacity: isDark ? 0.1 : 0.07 }]} />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -74,8 +75,8 @@ export function AuthScreenLayout({
               style={[
                 styles.card,
                 {
-                  backgroundColor: isDark ? `${BRAND.deepMuted}EE` : '#FFFFFFEE',
-                  borderColor: isDark ? `${BRAND.lavender}22` : `${BRAND.electric}15`,
+                  backgroundColor: isDark ? `${BRAND.deepMuted}EE` : colors.card,
+                  borderColor: isDark ? `${BRAND.lavender}22` : colors.borderStrong,
                 },
               ]}
             >

@@ -1,0 +1,35 @@
+import { BRAND } from '@/theme/brand';
+
+/** Curated light-mode tokens — warm, readable, on-brand for global audiences. */
+export const LIGHT = {
+  canvas: '#FFFAFB',
+  canvasAlt: '#F8F1FC',
+  canvasGlow: '#EFE4F8',
+  surface: '#FFFFFF',
+  surfaceRaised: '#FDFAFF',
+  surfaceMuted: '#F5ECFA',
+  border: `${BRAND.electric}1F`,
+  borderStrong: `${BRAND.electric}38`,
+  text: '#2A0845',
+  textSecondary: '#4A1F6E',
+  textMuted: '#7A5494',
+  input: '#FAF6FD',
+  inputBorder: `${BRAND.lavender}AA`,
+  chip: '#F4EBFA',
+  chipBorder: `${BRAND.electric}14`,
+  icon: '#6B3D96',
+  iconMuted: '#9B7AB8',
+  tabInactive: '#8E6BA8',
+  shadow: BRAND.deep,
+  chrome: '#FFFFFFF0',
+  chromeBorder: `${BRAND.electric}2E`,
+  streakBg: '#FFF4EC',
+  streakText: '#C2410C',
+  gradient: {
+    screen: ['#FFFAFB', '#F8F1FC', '#EFE4F8'] as const,
+    auth: ['#FFFAFB', '#F6EDFC', '#FFF8FE'] as const,
+    profile: ['#FFFAFB', '#F6EDFC', '#EDE4F6'] as const,
+    bookmarks: ['#FFFAFB', '#F4EBFA', '#EBE0F5'] as const,
+    welcome: ['#FFFAFB', '#F8F0FC', '#F3E8FA'] as const,
+  },
+} as const;

@@ -19,7 +19,11 @@ export function HomeHeader({ name, streak }: HomeHeaderProps) {
         <View
           style={[
             styles.datePill,
-            { backgroundColor: isDark ? '#33415580' : '#FFFFFF90' },
+            {
+              backgroundColor: colors.chrome,
+              borderWidth: isDark ? 0 : 1,
+              borderColor: colors.chromeBorder,
+            },
           ]}
         >
           <Text style={[styles.dateText, { color: colors.textMuted }]}>

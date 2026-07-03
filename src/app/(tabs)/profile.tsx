@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -11,141 +10,24 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CategoryChip } from '@/components/CategoryChip';
 import { getTabBarInset } from '@/components/navigation/FloatingTabBar';
+import { LatestSavedCurrioSnapshot } from '@/components/profile/LatestSavedCurrioSnapshot';
+import { ProfileBentoStat } from '@/components/profile/ProfileBentoStat';
+import { ThemeAppearanceSection } from '@/components/profile/ThemeAppearanceSection';
 import { TopicSelector } from '@/components/TopicSelector';
 import { APP_VERSION } from '@/constants';
 import { ENV } from '@/constants/env';
+import { useProfilePalette } from '@/hooks/useProfilePalette';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { BRAND } from '@/theme/brand';
 import type { Category, ThemeMode } from '@/types/curio';
 import { getMemberSince, getUserDisplayName, getUserInitials } from '@/utils/user';
-
-type ProfilePalette = {
-  gradient: [string, string, string];
-  orbOpacity: number;
-  kicker: string;
-  displayName: string;
-  email: string;
-  avatarBg: string;
-  memberPillBg: string;
-  memberPillBorder: string;
-  memberText: string;
-  bentoBorder: [string, string];
-  bentoInner: string;
-  bentoIcon: string;
-  bentoValue: string;
-  bentoLabel: string;
-  sectionTag: string;
-  tileBg: string;
-  tileBorder: string;
-  tileTitle: string;
-  tileSubtitle: string;
-  tileAccent: [string, string];
-  iconWrapBg: string;
-  blurTint: 'light' | 'dark';
-};
-
-function useProfilePalette(isDark: boolean): ProfilePalette {
-  return useMemo(
-    () =>
-      isDark
-        ? {
-            gradient: [BRAND.deep, '#1E0040', BRAND.deepMuted],
-            orbOpacity: 0.12,
-            kicker: `${BRAND.lavender}99`,
-            displayName: BRAND.mist,
-            email: `${BRAND.lavender}BB`,
-            avatarBg: BRAND.deepMuted,
-            memberPillBg: `${BRAND.electric}33`,
-            memberPillBorder: `${BRAND.lavender}44`,
-            memberText: BRAND.lavender,
-            bentoBorder: [`${BRAND.electric}44`, `${BRAND.lavender}18`],
-            bentoInner: `${BRAND.deep}AA`,
-            bentoIcon: BRAND.lavender,
-            bentoValue: BRAND.mist,
-            bentoLabel: `${BRAND.lavender}CC`,
-            sectionTag: `${BRAND.electric}CC`,
-            tileBg: `${BRAND.deepMuted}CC`,
-            tileBorder: `${BRAND.lavender}22`,
-            tileTitle: BRAND.mist,
-            tileSubtitle: `${BRAND.lavender}AA`,
-            tileAccent: [`${BRAND.lavender}33`, `${BRAND.electric}22`],
-            iconWrapBg: `${BRAND.electric}22`,
-            blurTint: 'dark',
-          }
-        : {
-            gradient: [BRAND.mist, '#F5E8F8', '#EDE0F5'],
-            orbOpacity: 0.1,
-            kicker: `${BRAND.deep}88`,
-            displayName: BRAND.deep,
-            email: `${BRAND.deep}99`,
-            avatarBg: '#FFFFFF',
-            memberPillBg: `${BRAND.electric}18`,
-            memberPillBorder: `${BRAND.electric}33`,
-            memberText: BRAND.deep,
-            bentoBorder: [`${BRAND.electric}33`, `${BRAND.lavender}40`],
-            bentoInner: '#FFFFFFDD',
-            bentoIcon: BRAND.electric,
-            bentoValue: BRAND.deep,
-            bentoLabel: `${BRAND.deep}99`,
-            sectionTag: BRAND.electric,
-            tileBg: '#FFFFFFEE',
-            tileBorder: `${BRAND.electric}22`,
-            tileTitle: BRAND.deep,
-            tileSubtitle: `${BRAND.deep}99`,
-            tileAccent: [`${BRAND.lavender}55`, `${BRAND.electric}18`],
-            iconWrapBg: `${BRAND.electric}14`,
-            blurTint: 'light',
-          },
-    [isDark],
-  );
-}
-
-function BentoStat({
-  icon,
-  value,
-  label,
-  large,
-  tilt,
-  delay,
-  palette,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: string | number;
-  label: string;
-  large?: boolean;
-  tilt: string;
-  delay: number;
-  palette: ProfilePalette;
-}) {
-  return (
-    <Animated.View
-      entering={FadeInUp.delay(delay).duration(500).springify().damping(16)}
-      style={[styles.bentoCell, large && styles.bentoLarge, { transform: [{ rotate: tilt }] }]}
-    >
-      <LinearGradient
-        colors={palette.bentoBorder}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.bentoBorder}
-      >
-        <BlurView intensity={40} tint={palette.blurTint} style={styles.bentoBlur}>
-          <View style={[styles.bentoInner, { backgroundColor: palette.bentoInner }]}>
-            <Ionicons name={icon} size={large ? 28 : 22} color={palette.bentoIcon} />
-            <Text style={[styles.bentoValue, { color: palette.bentoValue }]}>{value}</Text>
-            <Text style={[styles.bentoLabel, { color: palette.bentoLabel }]}>{label}</Text>
-          </View>
-        </BlurView>
-      </LinearGradient>
-    </Animated.View>
-  );
-}
 
 function OrbitTile({
   icon,
@@ -160,7 +42,7 @@ function OrbitTile({
   subtitle?: string;
   onPress?: () => void;
   delay: number;
-  palette: ProfilePalette;
+  palette: ReturnType<typeof useProfilePalette>;
 }) {
   const content = (
     <Animated.View
@@ -223,6 +105,7 @@ export default function ProfileScreen() {
   const isAuthLoading = useAuthStore((s) => s.isLoading);
 
   const [showInterests, setShowInterests] = useState(false);
+  const [showThemeDrawer, setShowThemeDrawer] = useState(false);
   const [editingInterests, setEditingInterests] = useState<Category[]>([]);
 
   const displayName = getUserDisplayName(user);
@@ -249,14 +132,9 @@ export default function ProfileScreen() {
     setShowInterests(false);
   };
 
-  const cycleTheme = async () => {
-    const modes: ThemeMode[] = ['system', 'light', 'dark'];
-    const next = modes[(modes.indexOf(themeMode) + 1) % modes.length];
-    await setThemeMode(next);
+  const handleThemeSelect = async (mode: ThemeMode) => {
+    await setThemeMode(mode);
   };
-
-  const themeLabel =
-    themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
 
   const handleSignOut = async () => {
     await signOut();
@@ -335,7 +213,8 @@ export default function ProfileScreen() {
           </Animated.View>
 
           <View style={styles.bentoGrid}>
-            <BentoStat
+            <ProfileBentoStat
+              kind="streak"
               icon="flame"
               value={streak}
               label="day streak"
@@ -343,26 +222,39 @@ export default function ProfileScreen() {
               tilt="-3deg"
               delay={120}
               palette={palette}
+              isDark={isDark}
             />
             <View style={styles.bentoStack}>
-              <BentoStat
+              <ProfileBentoStat
+                kind="saved"
                 icon="bookmark"
                 value={bookmarks.length}
                 label="saved"
                 tilt="2deg"
                 delay={200}
                 palette={palette}
+                isDark={isDark}
+                onPress={() => router.push('/bookmarks' as Href)}
               />
-              <BentoStat
+              <ProfileBentoStat
+                kind="topics"
                 icon="heart"
                 value={interests.length}
                 label="topics"
                 tilt="-2deg"
                 delay={280}
                 palette={palette}
+                isDark={isDark}
+                onPress={openInterestsEditor}
               />
             </View>
           </View>
+
+          <LatestSavedCurrioSnapshot
+            palette={palette}
+            delay={320}
+            onViewAll={() => router.push('/bookmarks' as Href)}
+          />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
             {'// preferences'}
@@ -375,13 +267,14 @@ export default function ProfileScreen() {
             delay={340}
             palette={palette}
           />
-          <OrbitTile
-            icon="moon-outline"
-            title="Appearance"
-            subtitle={themeLabel}
-            onPress={cycleTheme}
-            delay={400}
+          <ThemeAppearanceSection
+            themeMode={themeMode}
+            isOpen={showThemeDrawer}
+            onToggle={() => setShowThemeDrawer((open) => !open)}
+            onSelect={handleThemeSelect}
             palette={palette}
+            contentPadding={22}
+            delay={400}
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
@@ -540,44 +433,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 32,
-    minHeight: 168,
+    minHeight: 176,
   },
   bentoStack: {
     flex: 1,
     gap: 12,
-  },
-  bentoCell: {
-    flex: 1,
-  },
-  bentoLarge: {
-    flex: 1.1,
-  },
-  bentoBorder: {
-    flex: 1,
-    borderRadius: 22,
-    padding: 1,
-  },
-  bentoBlur: {
-    flex: 1,
-    borderRadius: 21,
-    overflow: 'hidden',
-  },
-  bentoInner: {
-    flex: 1,
-    padding: 16,
-    justifyContent: 'flex-end',
-  },
-  bentoValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -1,
-    marginTop: 8,
-  },
-  bentoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'lowercase',
-    letterSpacing: 0.5,
   },
   sectionTag: {
     fontSize: 12,

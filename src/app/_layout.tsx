@@ -30,6 +30,8 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="bookmarks" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="currio/[id]" options={{ animation: 'slide_from_right' }} />
       </Stack>
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </AppProviders>

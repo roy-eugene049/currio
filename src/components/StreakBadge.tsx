@@ -7,7 +7,7 @@ interface StreakBadgeProps {
 }
 
 export function StreakBadge({ streak }: StreakBadgeProps) {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
 
   if (streak <= 0) return null;
 
@@ -15,13 +15,15 @@ export function StreakBadge({ streak }: StreakBadgeProps) {
     <View
       className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
       style={{
-        backgroundColor: isDark ? '#334155' : '#FEF3C7',
+        backgroundColor: isDark ? '#334155' : colors.surfaceMuted,
+        borderWidth: isDark ? 0 : 1,
+        borderColor: colors.border,
       }}
     >
       <Text className="text-sm">🔥</Text>
       <Text
         className="text-sm font-semibold"
-        style={{ color: isDark ? '#FCD34D' : '#D97706' }}
+        style={{ color: isDark ? '#FCD34D' : colors.streak }}
       >
         {streak} Day{streak !== 1 ? 's' : ''} Streak
       </Text>

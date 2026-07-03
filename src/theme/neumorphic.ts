@@ -1,16 +1,17 @@
 import type { ViewStyle } from 'react-native';
 
 import { BRAND } from '@/theme/brand';
+import { LIGHT } from '@/theme/lightPalette';
 
 export const NEUMO = {
   light: {
-    background: BRAND.mist,
-    surface: '#F5E8F8',
-    shadowDark: `${BRAND.deep}33`,
+    background: LIGHT.canvas,
+    surface: LIGHT.surfaceRaised,
+    shadowDark: `${LIGHT.shadow}1A`,
     shadowLight: '#FFFFFF',
     accent: BRAND.electric,
-    text: BRAND.deep,
-    textMuted: `${BRAND.deep}99`,
+    text: LIGHT.text,
+    textMuted: LIGHT.textMuted,
   },
   dark: {
     background: BRAND.deep,
@@ -28,13 +29,13 @@ export function neumorphicRaised(isDark: boolean, radius = 24): ViewStyle {
   return {
     backgroundColor: palette.surface,
     borderRadius: radius,
-    shadowColor: isDark ? BRAND.electric : palette.shadowDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: isDark ? 0.25 : 0.18,
-    shadowRadius: 16,
+    shadowColor: isDark ? BRAND.electric : LIGHT.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: isDark ? 0.25 : 0.1,
+    shadowRadius: isDark ? 16 : 22,
     elevation: 8,
     borderWidth: 1,
-    borderColor: isDark ? `${BRAND.lavender}22` : `${BRAND.electric}18`,
+    borderColor: isDark ? `${BRAND.lavender}22` : LIGHT.border,
   };
 }
 
@@ -44,10 +45,10 @@ export function neumorphicInset(isDark: boolean, radius = 20): ViewStyle {
     backgroundColor: palette.surface,
     borderRadius: radius,
     borderWidth: 1,
-    borderColor: isDark ? `${BRAND.deep}88` : `${BRAND.electric}15`,
+    borderColor: isDark ? `${BRAND.deep}88` : LIGHT.chipBorder,
     shadowColor: palette.shadowDark,
     shadowOffset: { width: -2, height: -2 },
-    shadowOpacity: isDark ? 0.4 : 0.1,
+    shadowOpacity: isDark ? 0.4 : 0.06,
     shadowRadius: 6,
     elevation: 0,
   };
