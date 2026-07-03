@@ -11,8 +11,6 @@ function OAuthNavigationEffect() {
   const router = useRouter();
   const session = useAuthStore((s) => s.session);
   const isAuthHydrated = useAuthStore((s) => s.isAuthHydrated);
-  const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
-  const hasSeenWelcome = useAppStore((s) => s.hasSeenWelcome);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !isAuthHydrated || !session) return;
@@ -22,17 +20,15 @@ function OAuthNavigationEffect() {
     const onOAuthLanding = path === '/' || path === '/auth/callback';
 
     if (onOAuthLanding) {
+      const appState = useAppStore.getState();
       router.replace(
-        getPostAuthRoute({ hasCompletedOnboarding, hasSeenWelcome }) as Href,
+        getPostAuthRoute({
+          hasCompletedOnboarding: appState.hasCompletedOnboarding,
+          hasSeenWelcome: appState.hasSeenWelcome,
+        }) as Href,
       );
     }
-  }, [
-    hasCompletedOnboarding,
-    hasSeenWelcome,
-    isAuthHydrated,
-    router,
-    session,
-  ]);
+  }, [isAuthHydrated, router, session]);
 
   return null;
 }

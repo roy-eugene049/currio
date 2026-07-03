@@ -4,7 +4,6 @@ import { Keyboard, Pressable, Text } from 'react-native';
 
 import {
   AuthConfigBanner,
-  AuthErrorBanner,
   AuthSuccessBanner,
 } from '@/components/auth/AuthBanner';
 import { AuthButton } from '@/components/auth/AuthButton';
@@ -13,25 +12,23 @@ import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
 import { ENV } from '@/constants/env';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/useAuthStore';
+import { showAuthErrorToast, showToast } from '@/utils/authFeedback';
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
   const resetPassword = useAuthStore((s) => s.resetPassword);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
   const [email, setEmail] = useState('');
-  const [localError, setLocalError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   const handleReset = async () => {
     Keyboard.dismiss();
-    setLocalError(null);
     clearError();
 
     if (!email.trim()) {
-      setLocalError('Please enter your email address.');
+      showToast('Please enter your email address.');
       return;
     }
 
@@ -39,11 +36,9 @@ export default function ForgotPasswordScreen() {
       await resetPassword({ email });
       setSent(true);
     } catch {
-      // Error stored in auth store
+      showAuthErrorToast();
     }
   };
-
-  const displayError = localError ?? error;
 
   return (
     <AuthScreenLayout
@@ -68,8 +63,6 @@ export default function ForgotPasswordScreen() {
           message={`If an account exists for ${email}, you'll receive a reset link shortly. Check your inbox and spam folder.`}
         />
       ) : null}
-
-      {!sent && displayError ? <AuthErrorBanner message={displayError} /> : null}
 
       {!sent && (
         <>

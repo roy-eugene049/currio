@@ -15,8 +15,6 @@ export default function AuthCallbackScreen() {
   const url = useURL();
   const { colors } = useTheme();
   const applySession = useAuthStore((s) => s.applySession);
-  const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
-  const hasSeenWelcome = useAppStore((s) => s.hasSeenWelcome);
   const handled = useRef(false);
 
   useEffect(() => {
@@ -38,7 +36,7 @@ export default function AuthCallbackScreen() {
         if (callbackUrl && hasOAuthRedirectParams(callbackUrl)) {
           const data = await createSessionFromUrl(callbackUrl);
           if (data?.session) {
-            applySession(data.session);
+            await applySession(data.session);
           }
         }
 
@@ -48,21 +46,21 @@ export default function AuthCallbackScreen() {
           return;
         }
 
-        applySession(session);
-        finish(getPostAuthRoute({ hasCompletedOnboarding, hasSeenWelcome }));
+        await applySession(session);
+        const appState = useAppStore.getState();
+        finish(
+          getPostAuthRoute({
+            hasCompletedOnboarding: appState.hasCompletedOnboarding,
+            hasSeenWelcome: appState.hasSeenWelcome,
+          }),
+        );
       } catch {
         finish('/(auth)/login' as Href);
       }
     };
 
     void processCallback();
-  }, [
-    applySession,
-    hasCompletedOnboarding,
-    hasSeenWelcome,
-    router,
-    url,
-  ]);
+  }, [applySession, router, url]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

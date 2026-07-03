@@ -8,31 +8,14 @@ import type {
   SignInParams,
   SignUpParams,
 } from '@/types/auth';
+import { mapAuthErrorMessage } from '@/utils/authErrors';
 import {
   getOAuthRedirectUrl,
   hasOAuthRedirectParams,
 } from '@/utils/oauthRedirect';
 
 function mapAuthError(message: string): string {
-  const normalized = message.toLowerCase();
-
-  if (normalized.includes('invalid login credentials')) {
-    return 'Incorrect email or password. Please try again.';
-  }
-  if (normalized.includes('user already registered')) {
-    return 'An account with this email already exists.';
-  }
-  if (normalized.includes('password')) {
-    return 'Password must be at least 6 characters.';
-  }
-  if (normalized.includes('rate limit')) {
-    return 'Too many attempts. Please wait a moment and try again.';
-  }
-  if (normalized.includes('cancel')) {
-    return 'Sign in cancelled';
-  }
-
-  return message;
+  return mapAuthErrorMessage(message);
 }
 
 function getAuthParamsFromUrl(url: string) {

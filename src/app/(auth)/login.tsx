@@ -2,7 +2,7 @@ import { Link, useRouter, type Href } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { AuthConfigBanner, AuthErrorBanner } from '@/components/auth/AuthBanner';
+import { AuthConfigBanner } from '@/components/auth/AuthBanner';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AuthInput } from '@/components/auth/AuthInput';
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
@@ -10,6 +10,7 @@ import { ENV } from '@/constants/env';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { showAuthErrorToast, showToast } from '@/utils/authFeedback';
 import { getPostAuthRoute } from '@/utils/navigation';
 
 export default function LoginScreen() {
@@ -17,30 +18,29 @@ export default function LoginScreen() {
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
-  const hasCompletedOnboarding = useAppStore((s) => s.hasCompletedOnboarding);
-  const hasSeenWelcome = useAppStore((s) => s.hasSeenWelcome);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [localError, setLocalError] = useState<string | null>(null);
 
   const passwordRef = useRef<TextInput>(null);
 
   const navigateAfterAuth = () => {
+    const appState = useAppStore.getState();
     router.replace(
-      getPostAuthRoute({ hasCompletedOnboarding, hasSeenWelcome }),
+      getPostAuthRoute({
+        hasCompletedOnboarding: appState.hasCompletedOnboarding,
+        hasSeenWelcome: appState.hasSeenWelcome,
+      }),
     );
   };
 
   const handleLogin = async () => {
     Keyboard.dismiss();
-    setLocalError(null);
     clearError();
 
     if (!email.trim() || !password) {
-      setLocalError('Please enter your email and password.');
+      showToast('Please enter your email and password.');
       return;
     }
 
@@ -48,11 +48,9 @@ export default function LoginScreen() {
       await signIn({ email, password });
       navigateAfterAuth();
     } catch {
-      // Error stored in auth store
+      showAuthErrorToast();
     }
   };
-
-  const displayError = localError ?? error;
 
   return (
     <AuthScreenLayout
@@ -76,8 +74,6 @@ export default function LoginScreen() {
       {!ENV.isSupabaseConfigured && (
         <AuthConfigBanner message="Supabase is not configured yet. Add your API keys to .env — see docs/BACKEND.md." />
       )}
-
-      {displayError ? <AuthErrorBanner message={displayError} /> : null}
 
       <AuthInput
         label="Email"

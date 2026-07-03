@@ -37,10 +37,15 @@ interface AppStore extends AppState {
   getTodaysCurio: () => Promise<string>;
   refreshTodaysCurio: () => Promise<string>;
   pickNextCurio: (excludeCurioId?: string, preferredId?: string) => Promise<string>;
+  reconcileForAuthUser: (userId: string) => Promise<void>;
 }
 
 async function persistState(state: AppState): Promise<void> {
   await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
+}
+
+function createFreshAppState(): AppState {
+  return { ...initialState };
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -63,6 +68,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
     }
     set({ isHydrated: true });
+  },
+
+  reconcileForAuthUser: async (userId) => {
+    const lastUserId = await getSecureItem(STORAGE_KEYS.LAST_AUTH_USER_ID);
+    if (lastUserId === userId) return;
+
+    clearPrefetchedNext();
+    const fresh = createFreshAppState();
+    set(fresh);
+    await persistState(fresh);
+    await setSecureItem(STORAGE_KEYS.LAST_AUTH_USER_ID, userId);
   },
 
   completeOnboarding: async (interests) => {

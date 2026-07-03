@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { OAuthNavigationEffect } from '@/components/OAuthNavigationEffect';
+import { ToastHost } from '@/components/ui/ToastHost';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -20,18 +21,34 @@ const queryClient = new QueryClient({
 function HydrationGate({ children }: { children: ReactNode }) {
   const hydrate = useAppStore((s) => s.hydrate);
   const isHydrated = useAppStore((s) => s.isHydrated);
+  const reconcileForAuthUser = useAppStore((s) => s.reconcileForAuthUser);
   const isAuthHydrated = useAuthStore((s) => s.isAuthHydrated);
   const recordDailyOpen = useAppStore((s) => s.recordDailyOpen);
   const initializeAuth = useAuthStore((s) => s.initialize);
   const { colors } = useTheme();
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
-    Promise.all([hydrate(), initializeAuth()]).then(() => {
-      recordDailyOpen();
-    });
-  }, [hydrate, initializeAuth, recordDailyOpen]);
+    let cancelled = false;
 
-  if (!isHydrated || !isAuthHydrated) {
+    void Promise.all([hydrate(), initializeAuth()])
+      .then(async () => {
+        const id = useAuthStore.getState().user?.id;
+        if (id) {
+          await reconcileForAuthUser(id);
+        }
+        await recordDailyOpen();
+      })
+      .finally(() => {
+        if (!cancelled) setBootstrapped(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrate, initializeAuth, reconcileForAuthUser, recordDailyOpen]);
+
+  if (!isHydrated || !isAuthHydrated || !bootstrapped) {
     return <View className="flex-1" style={{ backgroundColor: colors.background }} />;
   }
 
@@ -44,6 +61,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <HydrationGate>
         <OAuthNavigationEffect />
         {children}
+        <ToastHost />
       </HydrationGate>
     </QueryClientProvider>
   );

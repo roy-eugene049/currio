@@ -12,7 +12,11 @@
     "supabase": "supabase",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link --project-ref YOUR_PROJECT_REF",
-    "supabase:setup": "node ./scripts/supabase-setup.mjs"
+    "supabase:setup": "node ./scripts/supabase-setup.mjs",
+    "curios:export": "node ./scripts/export-curios.mjs",
+    "curios:seed": "node ./scripts/seed-curios.mjs",
+    "supabase:deploy:curio-feed": "supabase functions deploy curio-feed",
+    "test:curio-feed": "node ./scripts/test-curio-feed.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
