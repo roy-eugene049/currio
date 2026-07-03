@@ -6,8 +6,8 @@ import {
 } from 'react-native-reanimated';
 
 export const TAB_WIDTH = 72;
-export const TAB_TRANSITION_MS = 460;
-export const TAB_TRANSITION_EASING = Easing.bezier(0.22, 1, 0.36, 1);
+export const TAB_TRANSITION_MS = 240;
+export const TAB_TRANSITION_EASING = Easing.bezier(0.25, 1, 0.4, 1);
 
 export const tabProgress = makeMutable(1);
 export const tabDirection = makeMutable(1);

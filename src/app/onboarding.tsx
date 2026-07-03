@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { BRAND } from '@/theme/brand';
 import type { Category } from '@/types/curio';
+import { showActionFeedback } from '@/utils/actionFeedback';
 
 const MIN_INTERESTS = 3;
 
@@ -30,6 +31,7 @@ export default function OnboardingScreen() {
   const handleContinue = async () => {
     if (selected.length < MIN_INTERESTS) return;
     await completeOnboarding(selected);
+    showActionFeedback('topics');
     router.replace('/welcome' as Href);
   };
 

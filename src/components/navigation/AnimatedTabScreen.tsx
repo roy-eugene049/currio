@@ -7,8 +7,7 @@ import {
   tabProgress,
 } from '@/components/navigation/tabTransition';
 
-const SLIDE_DISTANCE = 24;
-const LIFT_DISTANCE = 10;
+const SLIDE_DISTANCE = 14;
 
 interface AnimatedTabScreenProps {
   children: React.ReactNode;
@@ -17,20 +16,32 @@ interface AnimatedTabScreenProps {
 
 export function AnimatedTabScreen({ children, tabIndex }: AnimatedTabScreenProps) {
   const animatedStyle = useAnimatedStyle(() => {
-    if (tabIndex !== tabActiveIndex.value) {
-      return {};
-    }
-
+    const isActive = tabIndex === tabActiveIndex.value;
     const progress = tabProgress.value;
     const direction = tabDirection.value;
 
-    return {
-      opacity: interpolate(progress, [0, 1], [0.94, 1]),
-      transform: [
-        { translateX: interpolate(progress, [0, 1], [direction * SLIDE_DISTANCE, 0]) },
-        { translateY: interpolate(progress, [0, 1], [LIFT_DISTANCE, 0]) },
-      ],
-    };
+    if (isActive) {
+      return {
+        opacity: interpolate(progress, [0, 1], [0.98, 1]),
+        transform: [
+          {
+            translateX: interpolate(
+              progress,
+              [0, 1],
+              [direction * SLIDE_DISTANCE, 0],
+            ),
+          },
+        ],
+      };
+    }
+
+    if (progress < 1) {
+      return {
+        opacity: interpolate(progress, [0, 0.4], [1, 0]),
+      };
+    }
+
+    return { opacity: 1 };
   });
 
   return (

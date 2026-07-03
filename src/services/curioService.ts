@@ -58,8 +58,11 @@ export function pickRandomCurio(
 
   const pickFrom = (candidates: Curio[], resetSeen: boolean) => {
     let options = preferDifferentCategory(candidates, interests, excludeCategory);
-    if (excludeId && options.length > 1) {
-      options = options.filter((curio) => curio.id !== excludeId);
+    if (excludeId) {
+      const withoutCurrent = options.filter((curio) => curio.id !== excludeId);
+      if (withoutCurrent.length > 0) {
+        options = withoutCurrent;
+      }
     }
     if (options.length === 0) {
       throw new Error('No more currios to show');

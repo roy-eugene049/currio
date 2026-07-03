@@ -9,6 +9,7 @@ import Animated, {
 
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
+import { showActionFeedback } from '@/utils/actionFeedback';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -27,19 +28,29 @@ export function BookmarkButton({
   const bookmarked = useAppStore((s) => s.isBookmarked(curioId));
   const toggleBookmark = useAppStore((s) => s.toggleBookmark);
   const scale = useSharedValue(1);
+  const rotate = useSharedValue(0);
 
   const color = iconColor ?? colors.icon;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ scale: scale.value }, { rotate: `${rotate.value}deg` }],
   }));
 
   const handlePress = () => {
+    const wasBookmarked = bookmarked;
+
     scale.value = withSequence(
-      withSpring(1.3, { damping: 8 }),
-      withSpring(1, { damping: 12 }),
+      withSpring(1.28, { damping: 9, stiffness: 380 }),
+      withSpring(1, { damping: 14, stiffness: 280 }),
     );
-    toggleBookmark(curioId);
+
+    rotate.value = withSequence(
+      withSpring(wasBookmarked ? -12 : 10, { damping: 10, stiffness: 300 }),
+      withSpring(0, { damping: 12, stiffness: 220 }),
+    );
+
+    void toggleBookmark(curioId);
+    showActionFeedback(wasBookmarked ? 'bookmark-removed' : 'bookmark');
   };
 
   return (

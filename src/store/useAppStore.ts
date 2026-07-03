@@ -40,6 +40,7 @@ interface AppStore extends AppState {
     excludeCurioId?: string,
     preferredId?: string,
     currentCategory?: Category,
+    resetSeen?: boolean,
   ) => Promise<string>;
   reconcileForAuthUser: (userId: string) => Promise<void>;
   applySyncedState: (state: AppState) => Promise<void>;
@@ -228,51 +229,37 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return curio.id;
   },
 
-  pickNextCurio: async (excludeCurioId, preferredId, currentCategory) => {
+  pickNextCurio: async (excludeCurioId, preferredId, currentCategory, resetSeen = false) => {
     const state = get();
+
+    if (preferredId) {
+      const seenCurioIds = resetSeen
+        ? [preferredId]
+        : state.seenCurioIds.includes(preferredId)
+          ? state.seenCurioIds
+          : [...state.seenCurioIds, preferredId];
+
+      const next = { ...state, seenCurioIds };
+      set(next);
+      await persistState(next);
+      return preferredId;
+    }
+
     const excludeCategory =
       state.interests.length > 1
         ? (currentCategory ?? getCurioById(excludeCurioId ?? '')?.category)
         : undefined;
     let curio;
-    let resetSeen = false;
+    let didResetSeen = false;
 
-    if (preferredId) {
-      const preferred = getCurioById(preferredId);
-      const pool = getCuriosByCategories(state.interests);
-      const unseen = pool.filter(
-        (candidate) =>
-          !state.seenCurioIds.includes(candidate.id) &&
-          candidate.id !== excludeCurioId,
-      );
+    ({ curio, resetSeen: didResetSeen } = pickRandomCurio(
+      state.interests,
+      state.seenCurioIds,
+      excludeCurioId,
+      excludeCategory,
+    ));
 
-      const preferredIsDifferentTopic =
-        !excludeCategory || preferred?.category !== excludeCategory;
-
-      if (
-        preferred &&
-        preferredIsDifferentTopic &&
-        unseen.some((candidate) => candidate.id === preferredId)
-      ) {
-        curio = preferred;
-      } else {
-        ({ curio, resetSeen } = pickRandomCurio(
-          state.interests,
-          state.seenCurioIds,
-          excludeCurioId,
-          excludeCategory,
-        ));
-      }
-    } else {
-      ({ curio, resetSeen } = pickRandomCurio(
-        state.interests,
-        state.seenCurioIds,
-        excludeCurioId,
-        excludeCategory,
-      ));
-    }
-
-    const seenCurioIds = resetSeen
+    const seenCurioIds = didResetSeen
       ? [curio.id]
       : [...state.seenCurioIds, curio.id];
 

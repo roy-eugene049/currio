@@ -28,6 +28,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { BRAND } from '@/theme/brand';
 import type { Category, ThemeMode } from '@/types/curio';
+import { showActionFeedback } from '@/utils/actionFeedback';
 import { getMemberSince, getUserDisplayName, getUserInitials } from '@/utils/user';
 
 function OrbitTile({
@@ -129,6 +130,7 @@ export default function ProfileScreen() {
   const saveInterests = async () => {
     if (editingInterests.length >= 1) {
       await updateInterests(editingInterests);
+      showActionFeedback('topics');
     }
     setShowInterests(false);
   };

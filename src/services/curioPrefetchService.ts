@@ -9,11 +9,16 @@ type PrefetchedSlot = {
 };
 
 let slot: PrefetchedSlot | null = null;
-let inflightPrefetch: { forCurioId: string; task: Promise<Curio | null> } | null = null;
+let inflightKey: string | null = null;
+let inflightTask: Promise<Curio | null> | null = null;
 const listeners = new Set<() => void>();
 
 function notifyPrefetchListeners(): void {
   listeners.forEach((listener) => listener());
+}
+
+function prefetchKey(forCurioId: string, currentCategory?: Category): string {
+  return `${forCurioId}:${currentCategory ?? ''}`;
 }
 
 export function subscribePrefetch(listener: () => void): () => void {
@@ -29,9 +34,11 @@ export function takePrefetchedNext(forCurioId: string): Curio | null {
   return next;
 }
 
+/** Drop cached next curio — use on interest changes or auth resets only. */
 export function clearPrefetchedNext(): void {
   slot = null;
-  inflightPrefetch = null;
+  inflightKey = null;
+  inflightTask = null;
   notifyPrefetchListeners();
 }
 
@@ -40,7 +47,7 @@ export function peekPrefetchedNext(forCurioId: string): Curio | null {
   return slot.nextCurio;
 }
 
-async function resolveLocalPrefetch(
+async function resolveLocalNext(
   forCurioId: string,
   currentCategory?: Category,
 ): Promise<Curio> {
@@ -54,11 +61,10 @@ async function resolveLocalPrefetch(
     forCurioId,
     excludeCategory,
   );
-  await prepareCurioExperience(curio);
   return curio;
 }
 
-async function resolveRemotePrefetch(
+async function resolveRemoteNext(
   forCurioId: string,
   currentCategory?: Category,
 ): Promise<Curio> {
@@ -67,58 +73,64 @@ async function resolveRemotePrefetch(
   const excludeCategory = interests.length > 1 ? currentCategory : undefined;
 
   try {
-    const curio = await fetchNextCurio(forCurioId, excludeCategory);
-    await prepareCurioExperience(curio);
-    return curio;
+    return await fetchNextCurio(forCurioId, excludeCategory);
   } catch {
-    return resolveLocalPrefetch(forCurioId, currentCategory);
+    return resolveLocalNext(forCurioId, currentCategory);
   }
+}
+
+async function resolveNextCurio(
+  forCurioId: string,
+  currentCategory?: Category,
+): Promise<Curio> {
+  const { useAuthStore } = await import('@/store/useAuthStore');
+  const remoteEnabled =
+    isRemoteCuriosEnabled() && Boolean(useAuthStore.getState().session);
+
+  return remoteEnabled
+    ? resolveRemoteNext(forCurioId, currentCategory)
+    : resolveLocalNext(forCurioId, currentCategory);
+}
+
+function warmCurioExperience(curio: Curio): void {
+  void prepareCurioExperience(curio).then(() => notifyPrefetchListeners());
 }
 
 /**
  * Picks the next curio and preloads its backdrop while the user reads the current one.
+ * Text is available immediately; backdrop warming runs in the background.
  */
 export async function prefetchNextCurio(
   forCurioId: string,
   currentCategory?: Category,
 ): Promise<Curio | null> {
-  if (slot?.forCurioId === forCurioId) return slot.nextCurio;
-
-  if (inflightPrefetch?.forCurioId === forCurioId) {
-    return inflightPrefetch.task;
-  }
-
-  const task = (async () => {
-    const { useAuthStore } = await import('@/store/useAuthStore');
-    const remoteEnabled =
-      isRemoteCuriosEnabled() && Boolean(useAuthStore.getState().session);
-
-    const curio = remoteEnabled
-      ? await resolveRemotePrefetch(forCurioId, currentCategory)
-      : await resolveLocalPrefetch(forCurioId, currentCategory);
-
-    slot = { forCurioId, nextCurio: curio };
-    notifyPrefetchListeners();
-    return curio;
-  })().catch(() => null);
-
-  inflightPrefetch = { forCurioId, task };
-  const result = await task;
-  if (inflightPrefetch?.forCurioId === forCurioId) {
-    inflightPrefetch = null;
-  }
-  if (result) {
-    notifyPrefetchListeners();
-  }
-  return result;
-}
-
-/** Wait for an in-flight prefetch or start one. */
-export async function ensurePrefetchedNext(
-  forCurioId: string,
-  currentCategory?: Category,
-): Promise<Curio | null> {
   const ready = peekPrefetchedNext(forCurioId);
   if (ready) return ready;
-  return prefetchNextCurio(forCurioId, currentCategory);
+
+  const key = prefetchKey(forCurioId, currentCategory);
+  if (inflightKey === key && inflightTask) {
+    return inflightTask;
+  }
+
+  inflightKey = key;
+  inflightTask = (async () => {
+    try {
+      const curio = await resolveNextCurio(forCurioId, currentCategory);
+      if (inflightKey !== key) return null;
+
+      slot = { forCurioId, nextCurio: curio };
+      notifyPrefetchListeners();
+      warmCurioExperience(curio);
+      return curio;
+    } catch {
+      return null;
+    } finally {
+      if (inflightKey === key) {
+        inflightKey = null;
+        inflightTask = null;
+      }
+    }
+  })();
+
+  return inflightTask;
 }

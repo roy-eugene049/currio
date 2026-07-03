@@ -13,7 +13,7 @@ import { useTodaysCurio } from '@/hooks/useTodaysCurio';
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { data: curio, isLoading, isError, loadNext, isLoadingNext, isNextReady } =
+  const { data: curio, isLoading, isError, loadNext, isLoadingNext, isNextReady, displayEpoch } =
     useTodaysCurio();
 
   const bottomInset = getTabBarInset(insets.bottom);
@@ -44,6 +44,7 @@ export default function HomeScreen() {
         {curio && !isLoading && (
         <CurioReader
           curio={curio}
+          contentKey={`${curio.id}-${displayEpoch}`}
           bottomInset={bottomInset}
           onNextCurio={loadNext}
           isLoadingNext={isLoadingNext}

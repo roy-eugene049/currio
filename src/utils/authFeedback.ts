@@ -6,11 +6,11 @@ export function showAuthErrorToast(fallback?: string) {
   const { error, clearError } = useAuthStore.getState();
   const message = error ?? fallback;
   if (message) {
-    useToastStore.getState().show(message, 'error');
+    useToastStore.getState().show(message, { variant: 'error', type: 'error' });
   }
   clearError();
 }
 
 export function showToast(message: string, type: 'error' | 'success' = 'error') {
-  useToastStore.getState().show(message, type);
+  useToastStore.getState().show(message, { variant: type, type });
 }

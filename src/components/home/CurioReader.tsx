@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeIn,
-  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -26,8 +25,9 @@ import type { Curio } from '@/types/curio';
 
 interface CurioReaderProps {
   curio: Curio;
+  contentKey?: string;
   bottomInset: number;
-  onNextCurio?: (currentCurioId: string) => Promise<unknown>;
+  onNextCurio?: () => Promise<unknown>;
   isLoadingNext?: boolean;
   isNextReady?: boolean;
   onBack?: () => void;
@@ -36,6 +36,7 @@ interface CurioReaderProps {
 
 export function CurioReader({
   curio,
+  contentKey,
   bottomInset,
   onNextCurio,
   isLoadingNext = false,
@@ -73,13 +74,17 @@ export function CurioReader({
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-    void onNextCurio(curio.id)
+    void onNextCurio()
       .then(() => {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
           () => {},
         );
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (__DEV__) {
+          console.warn('[Currio] Failed to load next curio:', error);
+        }
+      });
   };
 
   return (
@@ -109,9 +114,8 @@ export function CurioReader({
             keyboardShouldPersistTaps="handled"
           >
             <Animated.View
-              key={curio.id}
-              entering={FadeIn.duration(240)}
-              exiting={FadeOut.duration(160)}
+              key={contentKey ?? curio.id}
+              entering={FadeIn.duration(180)}
             >
               <View style={styles.currioBlock}>
                 <Text

@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   fetchDailyCurio,
@@ -8,17 +9,20 @@ import {
 } from '@/services/curioApiService';
 import { prepareCurioExperience } from '@/services/curioImageService';
 import {
-  clearPrefetchedNext,
-  ensurePrefetchedNext,
   peekPrefetchedNext,
   prefetchNextCurio,
   subscribePrefetch,
   takePrefetchedNext,
 } from '@/services/curioPrefetchService';
-import { getCurioById } from '@/services/curioService';
+import { getCurioById, pickRandomCurio } from '@/services/curioService';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { Category, Curio } from '@/types/curio';
+
+type ResolvedNext = {
+  curio: Curio;
+  resetSeen: boolean;
+};
 
 async function loadLocalDailyCurio(
   getTodaysCurio: () => Promise<string>,
@@ -26,7 +30,7 @@ async function loadLocalDailyCurio(
   const id = await getTodaysCurio();
   const curio = getCurioById(id);
   if (!curio) throw new Error('Curio not found');
-  await prepareCurioExperience(curio);
+  void prepareCurioExperience(curio);
   return curio;
 }
 
@@ -34,7 +38,6 @@ export function useTodaysCurio() {
   const getTodaysCurio = useAppStore((s) => s.getTodaysCurio);
   const pickNextCurio = useAppStore((s) => s.pickNextCurio);
   const recordRemoteCurio = useAppStore((s) => s.recordRemoteCurio);
-  const interests = useAppStore((s) => s.interests);
   const isHydrated = useAppStore((s) => s.isHydrated);
   const session = useAuthStore((s) => s.session);
   const remoteEnabled = isRemoteCuriosEnabled() && Boolean(session);
@@ -42,7 +45,9 @@ export function useTodaysCurio() {
   const queryClient = useQueryClient();
   const queryKey = ['todays-curio', remoteEnabled ? 'remote' : 'local'] as const;
 
+  const advancingRef = useRef(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [displayEpoch, setDisplayEpoch] = useState(0);
   const [, setPrefetchTick] = useState(0);
 
   const bumpPrefetch = useCallback(() => {
@@ -51,6 +56,13 @@ export function useTodaysCurio() {
 
   useEffect(() => subscribePrefetch(bumpPrefetch), [bumpPrefetch]);
 
+  const warmPrefetch = useCallback(
+    (curio: Curio) => {
+      void prefetchNextCurio(curio.id, curio.category);
+    },
+    [],
+  );
+
   const query = useQuery({
     queryKey,
     queryFn: async () => {
@@ -58,7 +70,8 @@ export function useTodaysCurio() {
         try {
           const curio = await fetchDailyCurio();
           await recordRemoteCurio(curio.id, { isDaily: true });
-          await prepareCurioExperience(curio);
+          void prepareCurioExperience(curio);
+          warmPrefetch(curio);
           return curio;
         } catch (error) {
           if (__DEV__) {
@@ -67,7 +80,9 @@ export function useTodaysCurio() {
         }
       }
 
-      return loadLocalDailyCurio(getTodaysCurio);
+      const curio = await loadLocalDailyCurio(getTodaysCurio);
+      warmPrefetch(curio);
+      return curio;
     },
     enabled: isHydrated && (!remoteEnabled || Boolean(session)),
     staleTime: Infinity,
@@ -75,91 +90,137 @@ export function useTodaysCurio() {
 
   useEffect(() => {
     if (!query.data) return;
-    void prefetchNextCurio(query.data.id, query.data.category);
-  }, [query.data?.id, query.data?.category]);
+    warmPrefetch(query.data);
+  }, [query.data?.id, query.data?.category, warmPrefetch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const curio = queryClient.getQueryData<Curio>(queryKey);
+      if (!curio) return;
+
+      const timer = setTimeout(() => {
+        warmPrefetch(curio);
+      }, 280);
+
+      return () => clearTimeout(timer);
+    }, [queryClient, queryKey, warmPrefetch]),
+  );
 
   const isNextReady = query.data
     ? Boolean(peekPrefetchedNext(query.data.id))
     : false;
 
   const fetchSlowNext = useCallback(
-    async (currentCurioId: string, currentCategory?: Category): Promise<Curio> => {
+    async (
+      currentCurioId: string,
+      currentCategory?: Category,
+    ): Promise<ResolvedNext> => {
       if (remoteEnabled) {
-        const interests = useAppStore.getState().interests;
+        const storeInterests = useAppStore.getState().interests;
         const excludeCategory =
-          interests.length > 1 ? currentCategory : undefined;
-        const curio = await fetchNextCurio(currentCurioId, excludeCategory);
-        await prepareCurioExperience(curio);
-        return curio;
-      }
+          storeInterests.length > 1 ? currentCategory : undefined;
 
-      const id = await pickNextCurio(currentCurioId, undefined, currentCategory);
-      const curio = getCurioById(id);
-      if (!curio) throw new Error('Curio not found');
-      await prepareCurioExperience(curio);
-      return curio;
-    },
-    [pickNextCurio, remoteEnabled],
-  );
-
-  const applyNextCurio = useCallback(
-    (next: Curio, currentCurioId: string) => {
-      queryClient.setQueryData<Curio>(queryKey, next);
-
-      void (async () => {
-        if (remoteEnabled) {
-          await recordRemoteCurio(next.id);
-        } else {
-          await pickNextCurio(currentCurioId, next.id);
-        }
-        await prefetchNextCurio(next.id, next.category);
-      })();
-    },
-    [pickNextCurio, queryClient, queryKey, recordRemoteCurio, remoteEnabled],
-  );
-
-  const loadNext = useCallback(
-    async (currentCurioId: string) => {
-      const currentCategory = queryClient.getQueryData<Curio>(queryKey)?.category;
-      let next: Curio | null = null;
-      const prefetched = peekPrefetchedNext(currentCurioId);
-
-      if (prefetched) {
-        const sameTopic =
-          interests.length > 1 &&
-          currentCategory &&
-          prefetched.category === currentCategory;
-
-        if (sameTopic) {
-          clearPrefetchedNext();
-        } else {
-          next = takePrefetchedNext(currentCurioId);
-        }
-      }
-
-      if (!next) {
-        setIsAdvancing(true);
         try {
-          await ensurePrefetchedNext(currentCurioId, currentCategory);
-          next = takePrefetchedNext(currentCurioId);
-          if (!next) {
-            next = await fetchSlowNext(currentCurioId, currentCategory);
+          const curio = await fetchNextCurio(currentCurioId, excludeCategory);
+          void prepareCurioExperience(curio);
+          return { curio, resetSeen: false };
+        } catch (error) {
+          if (__DEV__) {
+            console.warn('[Currio] Remote next curio failed, using local:', error);
           }
-        } finally {
-          setIsAdvancing(false);
         }
       }
 
-      applyNextCurio(next, currentCurioId);
-      return next;
+      const state = useAppStore.getState();
+      const excludeCategory =
+        state.interests.length > 1 ? currentCategory : undefined;
+      const { curio, resetSeen } = pickRandomCurio(
+        state.interests,
+        state.seenCurioIds,
+        currentCurioId,
+        excludeCategory,
+      );
+      void prepareCurioExperience(curio);
+      return { curio, resetSeen };
     },
-    [applyNextCurio, fetchSlowNext, interests.length, queryClient, queryKey],
+    [remoteEnabled],
   );
+
+  const persistCurioAdvance = useCallback(
+    async (resolved: ResolvedNext, previousCurioId: string) => {
+      if (remoteEnabled) {
+        await recordRemoteCurio(resolved.curio.id);
+        return;
+      }
+
+      await pickNextCurio(
+        previousCurioId,
+        resolved.curio.id,
+        resolved.curio.category,
+        resolved.resetSeen,
+      );
+    },
+    [pickNextCurio, recordRemoteCurio, remoteEnabled],
+  );
+
+  const loadNext = useCallback(async (): Promise<Curio> => {
+    if (advancingRef.current) {
+      const cached = queryClient.getQueryData<Curio>(queryKey);
+      if (cached) return cached;
+      throw new Error('Curio advance already in progress');
+    }
+
+    const current = queryClient.getQueryData<Curio>(queryKey);
+    if (!current) throw new Error('No current curio');
+
+    advancingRef.current = true;
+    setIsAdvancing(true);
+
+    try {
+      let resolved: ResolvedNext | null = null;
+
+      let next = takePrefetchedNext(current.id);
+      if (!next) {
+        await prefetchNextCurio(current.id, current.category);
+        next = takePrefetchedNext(current.id);
+      }
+
+      if (next && next.id !== current.id) {
+        resolved = { curio: next, resetSeen: false };
+      }
+
+      if (!resolved) {
+        resolved = await fetchSlowNext(current.id, current.category);
+      }
+
+      if (resolved.curio.id === current.id) {
+        throw new Error('Could not load another curio');
+      }
+
+      queryClient.setQueryData<Curio>(queryKey, resolved.curio);
+      setDisplayEpoch((epoch) => epoch + 1);
+
+      warmPrefetch(resolved.curio);
+      void persistCurioAdvance(resolved, current.id);
+
+      return resolved.curio;
+    } finally {
+      advancingRef.current = false;
+      setIsAdvancing(false);
+    }
+  }, [
+    fetchSlowNext,
+    persistCurioAdvance,
+    queryClient,
+    queryKey,
+    warmPrefetch,
+  ]);
 
   return {
     ...query,
     loadNext,
     isLoadingNext: isAdvancing,
     isNextReady,
+    displayEpoch,
   };
 }
