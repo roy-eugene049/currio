@@ -1,5 +1,3 @@
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
-import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
@@ -10,13 +8,10 @@ import type {
   SignInParams,
   SignUpParams,
 } from '@/types/auth';
-
-export function getOAuthRedirectUrl(): string {
-  return makeRedirectUri({
-    scheme: 'currio',
-    path: 'auth/callback',
-  });
-}
+import {
+  getOAuthRedirectUrl,
+  hasOAuthRedirectParams,
+} from '@/utils/oauthRedirect';
 
 function mapAuthError(message: string): string {
   const normalized = message.toLowerCase();
@@ -40,27 +35,58 @@ function mapAuthError(message: string): string {
   return message;
 }
 
+function getAuthParamsFromUrl(url: string) {
+  const parsed = new URL(url);
+  const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ''));
+
+  return {
+    code: parsed.searchParams.get('code'),
+    accessToken:
+      hashParams.get('access_token') ?? parsed.searchParams.get('access_token'),
+    refreshToken:
+      hashParams.get('refresh_token') ?? parsed.searchParams.get('refresh_token'),
+    error:
+      hashParams.get('error') ??
+      parsed.searchParams.get('error') ??
+      hashParams.get('error_code') ??
+      parsed.searchParams.get('error_code'),
+    errorDescription:
+      hashParams.get('error_description') ??
+      parsed.searchParams.get('error_description'),
+  };
+}
+
 export async function createSessionFromUrl(url: string) {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-
-  if (errorCode) {
-    throw new Error(mapAuthError(errorCode));
-  }
-
-  const { access_token, refresh_token } = params;
-
-  if (!access_token) {
+  if (!hasOAuthRedirectParams(url)) {
     return null;
   }
 
-  const supabase = getSupabase();
-  const { data, error } = await supabase.auth.setSession({
-    access_token,
-    refresh_token,
-  });
+  const { code, accessToken, refreshToken, error, errorDescription } =
+    getAuthParamsFromUrl(url);
 
-  if (error) throw new Error(mapAuthError(error.message));
-  return data;
+  if (error) {
+    throw new Error(mapAuthError(errorDescription ?? error));
+  }
+
+  const supabase = getSupabase();
+
+  if (code) {
+    const { data, error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code);
+    if (exchangeError) throw new Error(mapAuthError(exchangeError.message));
+    return data;
+  }
+
+  if (accessToken) {
+    const { data, error: sessionError } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken ?? '',
+    });
+    if (sessionError) throw new Error(mapAuthError(sessionError.message));
+    return data;
+  }
+
+  return null;
 }
 
 export async function signUp({ email, password }: SignUpParams) {
@@ -101,10 +127,20 @@ export async function signInWithGoogle() {
   const supabase = getSupabase();
   const redirectTo = getOAuthRedirectUrl();
 
+  if (__DEV__) {
+    console.info('[Currio] OAuth redirect URL:', redirectTo);
+  }
+
   if (Platform.OS === 'web') {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
+      },
     });
     if (error) throw new Error(mapAuthError(error.message));
     return null;
@@ -161,4 +197,18 @@ export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw new Error(mapAuthError(error.message));
   return data.session;
+}
+
+/** Process OAuth callback URL on web (root or /auth/callback). */
+export async function completeOAuthRedirectIfNeeded() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return null;
+  }
+
+  const href = window.location.href;
+  if (!hasOAuthRedirectParams(href)) {
+    return null;
+  }
+
+  return createSessionFromUrl(href);
 }

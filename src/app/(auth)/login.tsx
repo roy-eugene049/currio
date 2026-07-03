@@ -6,7 +6,6 @@ import { AuthConfigBanner, AuthErrorBanner } from '@/components/auth/AuthBanner'
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AuthInput } from '@/components/auth/AuthInput';
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
-import { AuthDivider, GoogleSignInButton } from '@/components/auth/SocialAuth';
 import { ENV } from '@/constants/env';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
@@ -17,7 +16,6 @@ export default function LoginScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
-  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
@@ -34,18 +32,6 @@ export default function LoginScreen() {
     router.replace(
       getPostAuthRoute({ hasCompletedOnboarding, hasSeenWelcome }),
     );
-  };
-
-  const handleGoogleSignIn = async () => {
-    clearError();
-    setLocalError(null);
-    try {
-      await signInWithGoogle();
-      const session = useAuthStore.getState().session;
-      if (session) navigateAfterAuth();
-    } catch {
-      // cancelled or error handled in store
-    }
   };
 
   const handleLogin = async () => {
@@ -92,14 +78,6 @@ export default function LoginScreen() {
       )}
 
       {displayError ? <AuthErrorBanner message={displayError} /> : null}
-
-      <GoogleSignInButton
-        onPress={handleGoogleSignIn}
-        loading={isLoading}
-        disabled={!ENV.isSupabaseConfigured}
-      />
-
-      <AuthDivider label="or sign in with email" />
 
       <AuthInput
         label="Email"

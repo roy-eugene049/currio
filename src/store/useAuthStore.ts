@@ -1,4 +1,5 @@
 import type { Session, User } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { ENV } from '@/constants/env';
@@ -9,6 +10,7 @@ import type {
   SignInParams,
   SignUpParams,
 } from '@/types/auth';
+import { cleanOAuthUrlOnWeb } from '@/utils/oauthRedirect';
 
 interface AuthStore {
   session: Session | null;
@@ -23,6 +25,7 @@ interface AuthStore {
   signOut: () => Promise<void>;
   resetPassword: (params: ResetPasswordParams) => Promise<void>;
   clearError: () => void;
+  applySession: (session: Session | null) => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -39,7 +42,27 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
 
     try {
-      const session = await authService.getSession();
+      let oauthSession: Session | null = null;
+
+      if (Platform.OS === 'web') {
+        try {
+          const oauthData = await authService.completeOAuthRedirectIfNeeded();
+          if (oauthData?.session) {
+            oauthSession = oauthData.session;
+            cleanOAuthUrlOnWeb('/auth/callback');
+          }
+        } catch (oauthError) {
+          cleanOAuthUrlOnWeb('/login');
+          set({
+            error:
+              oauthError instanceof Error
+                ? oauthError.message
+                : 'Google sign in failed',
+          });
+        }
+      }
+
+      const session = oauthSession ?? (await authService.getSession());
       set({
         session,
         user: session?.user ?? null,
@@ -140,4 +163,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  applySession: (session) =>
+    set({
+      session,
+      user: session?.user ?? null,
+    }),
 }));

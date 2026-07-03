@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -26,6 +26,87 @@ import { BRAND } from '@/theme/brand';
 import type { Category, ThemeMode } from '@/types/curio';
 import { getMemberSince, getUserDisplayName, getUserInitials } from '@/utils/user';
 
+type ProfilePalette = {
+  gradient: [string, string, string];
+  orbOpacity: number;
+  kicker: string;
+  displayName: string;
+  email: string;
+  avatarBg: string;
+  memberPillBg: string;
+  memberPillBorder: string;
+  memberText: string;
+  bentoBorder: [string, string];
+  bentoInner: string;
+  bentoIcon: string;
+  bentoValue: string;
+  bentoLabel: string;
+  sectionTag: string;
+  tileBg: string;
+  tileBorder: string;
+  tileTitle: string;
+  tileSubtitle: string;
+  tileAccent: [string, string];
+  iconWrapBg: string;
+  blurTint: 'light' | 'dark';
+};
+
+function useProfilePalette(isDark: boolean): ProfilePalette {
+  return useMemo(
+    () =>
+      isDark
+        ? {
+            gradient: [BRAND.deep, '#1E0040', BRAND.deepMuted],
+            orbOpacity: 0.12,
+            kicker: `${BRAND.lavender}99`,
+            displayName: BRAND.mist,
+            email: `${BRAND.lavender}BB`,
+            avatarBg: BRAND.deepMuted,
+            memberPillBg: `${BRAND.electric}33`,
+            memberPillBorder: `${BRAND.lavender}44`,
+            memberText: BRAND.lavender,
+            bentoBorder: [`${BRAND.electric}44`, `${BRAND.lavender}18`],
+            bentoInner: `${BRAND.deep}AA`,
+            bentoIcon: BRAND.lavender,
+            bentoValue: BRAND.mist,
+            bentoLabel: `${BRAND.lavender}CC`,
+            sectionTag: `${BRAND.electric}CC`,
+            tileBg: `${BRAND.deepMuted}CC`,
+            tileBorder: `${BRAND.lavender}22`,
+            tileTitle: BRAND.mist,
+            tileSubtitle: `${BRAND.lavender}AA`,
+            tileAccent: [`${BRAND.lavender}33`, `${BRAND.electric}22`],
+            iconWrapBg: `${BRAND.electric}22`,
+            blurTint: 'dark',
+          }
+        : {
+            gradient: [BRAND.mist, '#F5E8F8', '#EDE0F5'],
+            orbOpacity: 0.1,
+            kicker: `${BRAND.deep}88`,
+            displayName: BRAND.deep,
+            email: `${BRAND.deep}99`,
+            avatarBg: '#FFFFFF',
+            memberPillBg: `${BRAND.electric}18`,
+            memberPillBorder: `${BRAND.electric}33`,
+            memberText: BRAND.deep,
+            bentoBorder: [`${BRAND.electric}33`, `${BRAND.lavender}40`],
+            bentoInner: '#FFFFFFDD',
+            bentoIcon: BRAND.electric,
+            bentoValue: BRAND.deep,
+            bentoLabel: `${BRAND.deep}99`,
+            sectionTag: BRAND.electric,
+            tileBg: '#FFFFFFEE',
+            tileBorder: `${BRAND.electric}22`,
+            tileTitle: BRAND.deep,
+            tileSubtitle: `${BRAND.deep}99`,
+            tileAccent: [`${BRAND.lavender}55`, `${BRAND.electric}18`],
+            iconWrapBg: `${BRAND.electric}14`,
+            blurTint: 'light',
+          },
+    [isDark],
+  );
+}
+
 function BentoStat({
   icon,
   value,
@@ -33,6 +114,7 @@ function BentoStat({
   large,
   tilt,
   delay,
+  palette,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   value: string | number;
@@ -40,6 +122,7 @@ function BentoStat({
   large?: boolean;
   tilt: string;
   delay: number;
+  palette: ProfilePalette;
 }) {
   return (
     <Animated.View
@@ -47,16 +130,16 @@ function BentoStat({
       style={[styles.bentoCell, large && styles.bentoLarge, { transform: [{ rotate: tilt }] }]}
     >
       <LinearGradient
-        colors={[`${BRAND.electric}44`, `${BRAND.lavender}18`]}
+        colors={palette.bentoBorder}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.bentoBorder}
       >
-        <BlurView intensity={40} tint="dark" style={styles.bentoBlur}>
-          <View style={styles.bentoInner}>
-            <Ionicons name={icon} size={large ? 28 : 22} color={BRAND.lavender} />
-            <Text style={styles.bentoValue}>{value}</Text>
-            <Text style={styles.bentoLabel}>{label}</Text>
+        <BlurView intensity={40} tint={palette.blurTint} style={styles.bentoBlur}>
+          <View style={[styles.bentoInner, { backgroundColor: palette.bentoInner }]}>
+            <Ionicons name={icon} size={large ? 28 : 22} color={palette.bentoIcon} />
+            <Text style={[styles.bentoValue, { color: palette.bentoValue }]}>{value}</Text>
+            <Text style={[styles.bentoLabel, { color: palette.bentoLabel }]}>{label}</Text>
           </View>
         </BlurView>
       </LinearGradient>
@@ -70,30 +153,45 @@ function OrbitTile({
   subtitle,
   onPress,
   delay,
+  palette,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle?: string;
   onPress?: () => void;
   delay: number;
+  palette: ProfilePalette;
 }) {
   const content = (
-    <Animated.View entering={FadeInDown.delay(delay).duration(450)} style={styles.orbitTile}>
+    <Animated.View
+      entering={FadeInDown.delay(delay).duration(450)}
+      style={[
+        styles.orbitTile,
+        {
+          backgroundColor: palette.tileBg,
+          borderColor: palette.tileBorder,
+        },
+      ]}
+    >
       <LinearGradient
-        colors={[`${BRAND.lavender}33`, `${BRAND.electric}22`]}
+        colors={palette.tileAccent}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.orbitAccent}
       />
-      <View style={styles.orbitIconWrap}>
+      <View style={[styles.orbitIconWrap, { backgroundColor: palette.iconWrapBg }]}>
         <Ionicons name={icon} size={20} color={BRAND.electric} />
       </View>
       <View style={styles.orbitCopy}>
-        <Text style={styles.orbitTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.orbitSubtitle}>{subtitle}</Text> : null}
+        <Text style={[styles.orbitTitle, { color: palette.tileTitle }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.orbitSubtitle, { color: palette.tileSubtitle }]}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {onPress ? (
-        <Ionicons name="arrow-forward" size={18} color={`${BRAND.lavender}99`} />
+        <Ionicons name="arrow-forward" size={18} color={palette.tileSubtitle} />
       ) : null}
     </Animated.View>
   );
@@ -110,7 +208,8 @@ function OrbitTile({
 }
 
 export default function ProfileScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const palette = useProfilePalette(isDark);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const interests = useAppStore((s) => s.interests);
@@ -165,15 +264,27 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[BRAND.deep, '#1E0040', BRAND.deepMuted]}
+        colors={palette.gradient}
         locations={[0, 0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.orb, styles.orbOne]} />
-      <View style={[styles.orb, styles.orbTwo]} />
+      <View
+        style={[
+          styles.orb,
+          styles.orbOne,
+          { opacity: palette.orbOpacity },
+        ]}
+      />
+      <View
+        style={[
+          styles.orb,
+          styles.orbTwo,
+          { opacity: palette.orbOpacity * 0.7 },
+        ]}
+      />
 
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView
@@ -184,7 +295,7 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View entering={FadeInDown.duration(500)} style={styles.hero}>
-            <Text style={styles.kicker}>YOUR SPACE</Text>
+            <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR SPACE</Text>
             <View style={styles.heroRow}>
               <LinearGradient
                 colors={[BRAND.electric, BRAND.lavender, BRAND.electric]}
@@ -192,16 +303,32 @@ export default function ProfileScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.avatarRing}
               >
-                <View style={styles.avatar}>
-                  <Text style={styles.initials}>{initials}</Text>
+                <View style={[styles.avatar, { backgroundColor: palette.avatarBg }]}>
+                  <Text style={[styles.initials, { color: palette.displayName }]}>
+                    {initials}
+                  </Text>
                 </View>
               </LinearGradient>
 
               <View style={styles.heroCopy}>
-                <Text style={styles.displayName}>{displayName}</Text>
-                <Text style={styles.email}>{user?.email ?? 'Not signed in'}</Text>
-                <View style={styles.memberPill}>
-                  <Text style={styles.memberText}>since {memberSince}</Text>
+                <Text style={[styles.displayName, { color: palette.displayName }]}>
+                  {displayName}
+                </Text>
+                <Text style={[styles.email, { color: palette.email }]}>
+                  {user?.email ?? 'Not signed in'}
+                </Text>
+                <View
+                  style={[
+                    styles.memberPill,
+                    {
+                      backgroundColor: palette.memberPillBg,
+                      borderColor: palette.memberPillBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.memberText, { color: palette.memberText }]}>
+                    since {memberSince}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -215,6 +342,7 @@ export default function ProfileScreen() {
               large
               tilt="-3deg"
               delay={120}
+              palette={palette}
             />
             <View style={styles.bentoStack}>
               <BentoStat
@@ -223,6 +351,7 @@ export default function ProfileScreen() {
                 label="saved"
                 tilt="2deg"
                 delay={200}
+                palette={palette}
               />
               <BentoStat
                 icon="heart"
@@ -230,17 +359,21 @@ export default function ProfileScreen() {
                 label="topics"
                 tilt="-2deg"
                 delay={280}
+                palette={palette}
               />
             </View>
           </View>
 
-          <Text style={styles.sectionTag}>{'// preferences'}</Text>
+          <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
+            {'// preferences'}
+          </Text>
           <OrbitTile
             icon="heart-outline"
             title="Interests"
             subtitle={`${interests.length} topics in orbit`}
             onPress={openInterestsEditor}
             delay={340}
+            palette={palette}
           />
           <OrbitTile
             icon="moon-outline"
@@ -248,16 +381,26 @@ export default function ProfileScreen() {
             subtitle={themeLabel}
             onPress={cycleTheme}
             delay={400}
+            palette={palette}
           />
 
-          <Text style={styles.sectionTag}>{'// about'}</Text>
+          <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
+            {'// about'}
+          </Text>
           <OrbitTile
             icon="sparkles-outline"
             title="About Currio"
             subtitle="Learn something new every day"
             delay={460}
+            palette={palette}
           />
-          <OrbitTile icon="code-slash-outline" title="Version" subtitle={APP_VERSION} delay={520} />
+          <OrbitTile
+            icon="code-slash-outline"
+            title="Version"
+            subtitle={APP_VERSION}
+            delay={520}
+            palette={palette}
+          />
           {ENV.isSupabaseConfigured ? (
             <OrbitTile
               icon="log-out-outline"
@@ -265,12 +408,15 @@ export default function ProfileScreen() {
               subtitle={isAuthLoading ? 'Signing out…' : 'End your session'}
               onPress={handleSignOut}
               delay={580}
+              palette={palette}
             />
           ) : null}
 
           {interests.length > 0 ? (
             <>
-              <Text style={styles.sectionTag}>{'// orbit'}</Text>
+              <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
+                {'// orbit'}
+              </Text>
               <View style={styles.chips}>
                 {interests.map((category) => (
                   <CategoryChip key={category} category={category} size="sm" />
@@ -309,13 +455,11 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BRAND.deep,
   },
   orb: {
     position: 'absolute',
     borderRadius: 999,
     backgroundColor: BRAND.electric,
-    opacity: 0.12,
   },
   orbOne: {
     width: 220,
@@ -328,7 +472,6 @@ const styles = StyleSheet.create({
     height: 160,
     bottom: 180,
     left: -70,
-    opacity: 0.08,
   },
   safe: { flex: 1 },
   scroll: {
@@ -342,7 +485,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 3,
-    color: `${BRAND.lavender}99`,
     marginBottom: 20,
   },
   heroRow: {
@@ -360,14 +502,12 @@ const styles = StyleSheet.create({
   avatar: {
     flex: 1,
     borderRadius: 44,
-    backgroundColor: BRAND.deepMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initials: {
     fontSize: 30,
     fontWeight: '800',
-    color: BRAND.mist,
     letterSpacing: -1,
   },
   heroCopy: {
@@ -377,13 +517,11 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 26,
     fontWeight: '800',
-    color: BRAND.mist,
     letterSpacing: -0.6,
     marginBottom: 4,
   },
   email: {
     fontSize: 13,
-    color: `${BRAND.lavender}BB`,
     marginBottom: 10,
   },
   memberPill: {
@@ -391,14 +529,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: `${BRAND.electric}33`,
     borderWidth: 1,
-    borderColor: `${BRAND.lavender}44`,
   },
   memberText: {
     fontSize: 11,
     fontWeight: '600',
-    color: BRAND.lavender,
     letterSpacing: 0.5,
   },
   bentoGrid: {
@@ -431,30 +566,25 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     justifyContent: 'flex-end',
-    backgroundColor: `${BRAND.deep}AA`,
   },
   bentoValue: {
     fontSize: 32,
     fontWeight: '800',
-    color: BRAND.mist,
     letterSpacing: -1,
     marginTop: 8,
   },
   bentoLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: `${BRAND.lavender}CC`,
     textTransform: 'lowercase',
     letterSpacing: 0.5,
   },
   sectionTag: {
     fontSize: 12,
     fontWeight: '700',
-    color: `${BRAND.electric}CC`,
     letterSpacing: 1,
     marginBottom: 12,
     marginTop: 8,
-    fontFamily: undefined,
   },
   orbitTile: {
     flexDirection: 'row',
@@ -464,9 +594,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10,
     borderRadius: 18,
-    backgroundColor: `${BRAND.deepMuted}CC`,
     borderWidth: 1,
-    borderColor: `${BRAND.lavender}22`,
     overflow: 'hidden',
   },
   orbitAccent: {
@@ -482,7 +610,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: `${BRAND.electric}22`,
     transform: [{ rotate: '-8deg' }],
   },
   orbitCopy: {
@@ -491,11 +618,9 @@ const styles = StyleSheet.create({
   orbitTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: BRAND.mist,
   },
   orbitSubtitle: {
     fontSize: 13,
-    color: `${BRAND.lavender}AA`,
     marginTop: 2,
   },
   chips: {

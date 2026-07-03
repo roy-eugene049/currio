@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
+import { OAuthNavigationEffect } from '@/components/OAuthNavigationEffect';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -40,7 +41,10 @@ function HydrationGate({ children }: { children: ReactNode }) {
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <HydrationGate>{children}</HydrationGate>
+      <HydrationGate>
+        <OAuthNavigationEffect />
+        {children}
+      </HydrationGate>
     </QueryClientProvider>
   );
 }

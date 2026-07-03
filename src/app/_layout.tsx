@@ -1,5 +1,7 @@
 import '../../global.css';
 
+import '@/utils/cryptoPolyfill';
+
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
