@@ -146,28 +146,7 @@ export default function ProfileScreen() {
 
   return (
     <AnimatedTabScreen tabIndex={1}>
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={palette.gradient}
-        locations={[0, 0.55, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      <View
-        style={[
-          styles.orb,
-          styles.orbOne,
-          { opacity: palette.orbOpacity },
-        ]}
-      />
-      <View
-        style={[
-          styles.orb,
-          styles.orbTwo,
-          { opacity: palette.orbOpacity * 0.7 },
-        ]}
-      />
-
+      <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView
           contentContainerStyle={[
@@ -356,23 +335,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  orb: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: BRAND.electric,
-  },
-  orbOne: {
-    width: 220,
-    height: 220,
-    top: -60,
-    right: -50,
-  },
-  orbTwo: {
-    width: 160,
-    height: 160,
-    bottom: 180,
-    left: -70,
   },
   safe: { flex: 1 },
   scroll: {

@@ -7,12 +7,10 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { AnimatedTabScreen } from '@/components/navigation/AnimatedTabScreen';
 import { getTabBarInset } from '@/components/navigation/FloatingTabBar';
 import { ScreenBackground } from '@/components/ScreenBackground';
-import { useTheme } from '@/hooks/useTheme';
 import { useTodaysCurio } from '@/hooks/useTodaysCurio';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
   const { data: curio, isLoading, isError, loadNext, isLoadingNext, isNextReady, displayEpoch } =
     useTodaysCurio();
 
@@ -20,7 +18,7 @@ export default function HomeScreen() {
 
   return (
     <AnimatedTabScreen tabIndex={0}>
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={styles.root}>
         {isLoading && (
         <ScreenBackground>
           <SafeAreaView style={styles.safe}>
