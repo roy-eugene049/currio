@@ -21,6 +21,7 @@ interface AuthStore {
   isLoading: boolean;
   error: string | null;
   initialize: () => Promise<void>;
+  validateSession: () => Promise<boolean>;
   signIn: (params: SignInParams) => Promise<void>;
   signUp: (params: SignUpParams) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -37,7 +38,25 @@ async function bindAppStateToUser(user: User | null | undefined) {
   await pullAndMerge();
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+function isInvalidSessionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  const status = typeof error === 'object' && error && 'status' in error
+    ? Number((error as { status?: unknown }).status)
+    : undefined;
+
+  if (status === 401 || status === 403) return true;
+
+  return (
+    message.includes('user not found') ||
+    message.includes('does not exist') ||
+    message.includes('invalid jwt') ||
+    message.includes('jwt expired') ||
+    message.includes('session missing') ||
+    message.includes('refresh token not found')
+  );
+}
+
+export const useAuthStore = create<AuthStore>((set, get) => ({
   session: null,
   user: null,
   isAuthHydrated: false,
@@ -75,6 +94,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
         isAuthHydrated: true,
       });
 
+      if (session) {
+        void get().validateSession();
+      }
+
       const supabase = getSupabase();
       supabase.auth.onAuthStateChange((_event, nextSession) => {
         set({
@@ -85,6 +108,31 @@ export const useAuthStore = create<AuthStore>((set) => ({
       });
     } catch {
       set({ isAuthHydrated: true, session: null, user: null });
+    }
+  },
+
+  validateSession: async () => {
+    const currentSession = get().session;
+    if (!ENV.isSupabaseConfigured || !currentSession) return false;
+
+    try {
+      const verifiedUser = await authService.getVerifiedUser();
+      if (!verifiedUser) {
+        await authService.signOutLocal().catch(() => {});
+        set({ session: null, user: null, isLoading: false });
+        return false;
+      }
+
+      set({ user: verifiedUser });
+      return true;
+    } catch (err) {
+      if (!isInvalidSessionError(err)) {
+        return true;
+      }
+
+      await authService.signOutLocal().catch(() => {});
+      set({ session: null, user: null, isLoading: false });
+      return false;
     }
   },
 

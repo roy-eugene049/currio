@@ -22,6 +22,32 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let pushInFlight: Promise<void> | null = null;
 let pullInFlight: Promise<void> | null = null;
 
+function isAuthBackendError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code).toLowerCase()
+      : '';
+  const status =
+    typeof error === 'object' && error && 'status' in error
+      ? Number((error as { status?: unknown }).status)
+      : undefined;
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === '42501' ||
+    message.includes('jwt') ||
+    message.includes('permission denied') ||
+    message.includes('violates row-level security')
+  );
+}
+
+function validateSessionAfterAuthFailure(error: unknown) {
+  if (!isAuthBackendError(error)) return;
+  void useAuthStore.getState().validateSession();
+}
+
 function getUserId(): string | null {
   return useAuthStore.getState().user?.id ?? null;
 }
@@ -237,6 +263,7 @@ export async function pullAndMerge(): Promise<void> {
         await pushAppState();
       }
     } catch (error) {
+      validateSessionAfterAuthFailure(error);
       if (__DEV__) {
         console.warn('[Currio] Cloud sync pull failed:', error);
       }
@@ -299,6 +326,7 @@ export async function pushAppState(): Promise<void> {
         await setLocalUpdatedAt(data.updated_at);
       }
     } catch (error) {
+      validateSessionAfterAuthFailure(error);
       if (__DEV__) {
         console.warn('[Currio] Cloud sync push failed:', error);
       }

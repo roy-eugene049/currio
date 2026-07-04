@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { OAuthNavigationEffect } from '@/components/OAuthNavigationEffect';
+import { AuthSessionGuard } from '@/components/AuthSessionGuard';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
@@ -62,6 +63,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <HydrationGate>
         <OAuthNavigationEffect />
+        <AuthSessionGuard />
         {children}
         <ToastHost />
       </HydrationGate>

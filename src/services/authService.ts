@@ -160,6 +160,20 @@ export async function signOut() {
   if (error) throw new Error(mapAuthError(error.message));
 }
 
+export async function signOutLocal() {
+  if (!ENV.isSupabaseConfigured) return;
+  const supabase = getSupabase();
+  await supabase.auth.signOut({ scope: 'local' });
+}
+
+export async function getVerifiedUser() {
+  if (!ENV.isSupabaseConfigured) return null;
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return data.user;
+}
+
 export async function resetPassword({ email }: ResetPasswordParams) {
   if (!ENV.isSupabaseConfigured) {
     throw new Error('Backend not configured. See docs/BACKEND.md');
