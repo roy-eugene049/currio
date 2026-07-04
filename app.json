@@ -12,6 +12,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.twiicetech.currio",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFF2F2",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,6 +33,9 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/images/splash-wordmark.png",
+          "imageWidth": 260,
+          "resizeMode": "contain",
           "backgroundColor": "#6F00FF",
           "dark": {
             "backgroundColor": "#6F00FF"
@@ -42,6 +47,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6843e2c1-1037-4347-a583-6d832d0467f7"
+      }
+    },
+    "owner": "twiice_bot"
   }
 }

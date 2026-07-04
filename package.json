@@ -5,8 +5,8 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint src --max-warnings 0",
     "supabase": "supabase",
@@ -19,7 +19,9 @@
     "supabase:deploy:curio-feed": "supabase functions deploy curio-feed",
     "supabase:deploy:generate-curio": "supabase functions deploy generate-curio",
     "supabase:deploy:functions": "supabase functions deploy curio-feed && supabase functions deploy generate-curio",
-    "test:curio-feed": "node ./scripts/test-curio-feed.mjs"
+    "test:curio-feed": "node ./scripts/test-curio-feed.mjs",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:apk:local": "eas build --platform android --profile preview --local"
   },
   "dependencies": {
     "@expo-google-fonts/syne": "^0.4.2",
@@ -64,6 +66,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "eas-cli": "^20.5.1",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "supabase": "^2.109.0",
