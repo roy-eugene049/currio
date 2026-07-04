@@ -5,6 +5,7 @@ import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { AuthConfigBanner } from '@/components/auth/AuthBanner';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AuthInput } from '@/components/auth/AuthInput';
+import { AuthProgressOverlay } from '@/components/auth/AuthProgressOverlay';
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
 import { ENV } from '@/constants/env';
 import { useTheme } from '@/hooks/useTheme';
@@ -22,8 +23,10 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const passwordRef = useRef<TextInput>(null);
+  const isBusy = isLoading || Boolean(authMessage);
 
   const navigateAfterAuth = () => {
     const appState = useAppStore.getState();
@@ -45,9 +48,12 @@ export default function LoginScreen() {
     }
 
     try {
+      setAuthMessage('Signing you in');
       await signIn({ email, password });
-      navigateAfterAuth();
+      setAuthMessage('Opening Currio');
+      setTimeout(navigateAfterAuth, 350);
     } catch {
+      setAuthMessage(null);
       showAuthErrorToast();
     }
   };
@@ -56,6 +62,14 @@ export default function LoginScreen() {
     <AuthScreenLayout
       title="Welcome back"
       subtitle="Sign in to continue your daily learning journey."
+      overlay={
+        authMessage ? (
+          <AuthProgressOverlay
+            title={authMessage}
+            message="Syncing your saved currios."
+          />
+        ) : null
+      }
       footer={
         <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
           Don&apos;t have an account?{' '}
@@ -113,8 +127,9 @@ export default function LoginScreen() {
 
       <AuthButton
         label="Sign In"
+        loadingLabel="Signing in..."
         onPress={handleLogin}
-        loading={isLoading}
+        loading={isBusy}
         disabled={!ENV.isSupabaseConfigured}
       />
     </AuthScreenLayout>

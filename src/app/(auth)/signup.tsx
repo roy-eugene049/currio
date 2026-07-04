@@ -1,4 +1,5 @@
 import { Link, useRouter, type Href } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { Keyboard, Pressable, Text, TextInput } from 'react-native';
 
@@ -8,6 +9,7 @@ import {
 } from '@/components/auth/AuthBanner';
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AuthInput } from '@/components/auth/AuthInput';
+import { AuthProgressOverlay } from '@/components/auth/AuthProgressOverlay';
 import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
 import { ENV } from '@/constants/env';
 import { useTheme } from '@/hooks/useTheme';
@@ -26,8 +28,10 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const passwordRef = useRef<TextInput>(null);
+  const isBusy = isLoading || Boolean(authMessage);
 
   const navigateAfterAuth = () => {
     const appState = useAppStore.getState();
@@ -54,16 +58,23 @@ export default function SignUpScreen() {
     }
 
     try {
+      setAuthMessage('Creating your account');
       await signUp({ email, password });
       const session = useAuthStore.getState().session;
       if (session) {
-        navigateAfterAuth();
+        setAuthMessage('Opening Currio');
+        setTimeout(navigateAfterAuth, 350);
         return;
       }
+      setAuthMessage(null);
       setSuccessMessage(
-        'Account created! Check your email to confirm, then sign in.',
+        'Check your email to confirm your account. Then come back and sign in.',
+      );
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => {},
       );
     } catch {
+      setAuthMessage(null);
       showAuthErrorToast();
     }
   };
@@ -77,6 +88,14 @@ export default function SignUpScreen() {
     <AuthScreenLayout
       title="Create account"
       subtitle="Join Currio and start discovering something new every day."
+      overlay={
+        authMessage ? (
+          <AuthProgressOverlay
+            title={authMessage}
+            message="Preparing your Currio space."
+          />
+        ) : null
+      }
       footer={
         <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
           Already have an account?{' '}
@@ -101,7 +120,10 @@ export default function SignUpScreen() {
       <AuthInput
         label="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => {
+          setSuccessMessage(null);
+          setEmail(text);
+        }}
         placeholder="you@example.com"
         keyboardType="email-address"
         autoComplete="email"
@@ -114,7 +136,10 @@ export default function SignUpScreen() {
         ref={passwordRef}
         label="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setSuccessMessage(null);
+          setPassword(text);
+        }}
         placeholder="At least 6 characters"
         secureTextEntry
         showPasswordToggle
@@ -138,10 +163,11 @@ export default function SignUpScreen() {
       ) : null}
 
       <AuthButton
-        label="Create Account"
+        label={successMessage ? 'Check your inbox' : 'Create Account'}
+        loadingLabel="Creating account..."
         onPress={handleSignUp}
-        loading={isLoading}
-        disabled={!ENV.isSupabaseConfigured}
+        loading={isBusy}
+        disabled={!ENV.isSupabaseConfigured || Boolean(successMessage)}
       />
     </AuthScreenLayout>
   );

@@ -8,6 +8,7 @@ interface AuthButtonProps {
   label: string;
   onPress: () => void;
   loading?: boolean;
+  loadingLabel?: string;
   disabled?: boolean;
   variant?: 'primary' | 'ghost';
 }
@@ -16,6 +17,7 @@ export function AuthButton({
   label,
   onPress,
   loading = false,
+  loadingLabel,
   disabled = false,
   variant = 'primary',
 }: AuthButtonProps) {
@@ -33,7 +35,9 @@ export function AuthButton({
         accessibilityState={{ disabled: isDisabled }}
       >
         {loading ? (
-          <ActivityIndicator color={colors.primary} />
+          <Text style={[styles.ghostLabel, { color: colors.primary }]}>
+            {loadingLabel ?? label}
+          </Text>
         ) : (
           <Text style={[styles.ghostLabel, { color: colors.primary }]}>{label}</Text>
         )}
@@ -64,7 +68,10 @@ export function AuthButton({
         style={styles.primaryButton}
       >
         {loading ? (
-          <ActivityIndicator color={BRAND.mist} />
+          <>
+            <ActivityIndicator color={BRAND.mist} />
+            <Text style={styles.primaryLabel}>{loadingLabel ?? label}</Text>
+          </>
         ) : (
           <Text style={styles.primaryLabel}>{label}</Text>
         )}
@@ -88,6 +95,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
     minHeight: 52,
   },
   primaryLabel: {

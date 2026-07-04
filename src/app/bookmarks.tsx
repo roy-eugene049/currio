@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,10 +46,29 @@ export default function BookmarksScreen() {
     staleTime: 30_000,
   });
 
+  const topicCounts = useMemo(() => {
+    return savedCurrios.reduce<Partial<Record<Category, number>>>((counts, curio) => {
+      counts[curio.category] = (counts[curio.category] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [savedCurrios]);
+
   const topicFilters = useMemo((): Category[] => {
-    if (interests.length > 0) return interests;
-    return [...new Set(savedCurrios.map((curio) => curio.category))];
+    const savedCategories = [...new Set(savedCurrios.map((curio) => curio.category))];
+    const interestOrder = new Map(interests.map((category, index) => [category, index]));
+
+    return savedCategories.sort((a, b) => {
+      const aOrder = interestOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = interestOrder.get(b) ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.localeCompare(b);
+    });
   }, [interests, savedCurrios]);
+
+  useEffect(() => {
+    if (activeFilter === 'All' || topicFilters.includes(activeFilter)) return;
+    setActiveFilter('All');
+  }, [activeFilter, topicFilters]);
 
   const filteredCurrios = useMemo(() => {
     if (activeFilter === 'All') return savedCurrios;
@@ -114,6 +133,8 @@ export default function BookmarksScreen() {
 
         <BookmarksFilterRail
           topics={topicFilters}
+          counts={topicCounts}
+          totalCount={savedCurrios.length}
           active={activeFilter}
           onChange={setActiveFilter}
           isDark={isDark}

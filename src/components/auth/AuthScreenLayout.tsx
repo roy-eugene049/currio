@@ -22,6 +22,7 @@ interface AuthScreenLayoutProps {
   subtitle: string;
   children: ReactNode;
   footer?: ReactNode;
+  overlay?: ReactNode;
 }
 
 export function AuthScreenLayout({
@@ -29,6 +30,7 @@ export function AuthScreenLayout({
   subtitle,
   children,
   footer,
+  overlay,
 }: AuthScreenLayoutProps) {
   const { colors, isDark, light } = useTheme();
   const insets = useSafeAreaInsets();
@@ -89,6 +91,7 @@ export function AuthScreenLayout({
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {overlay}
     </View>
   );
 }

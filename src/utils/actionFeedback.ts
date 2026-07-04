@@ -9,7 +9,7 @@ const PRESETS: Record<
   { message: string; variant: FeedbackVariant }
 > = {
   bookmark: {
-    message: 'Saved for later',
+    message: 'Currio saved',
     variant: 'bookmark',
   },
   'bookmark-removed': {
