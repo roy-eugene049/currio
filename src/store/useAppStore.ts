@@ -3,11 +3,16 @@ import { create } from 'zustand';
 import { STORAGE_KEYS } from '@/constants';
 import { clearPrefetchedNext } from '@/services/curioPrefetchService';
 import { pickRandomCurio, getCurioById } from '@/services/curioService';
-import { syncLearningReminders } from '@/services/reminderService';
+import {
+  DEFAULT_REMINDER_HOURS,
+  normalizeReminderHours,
+  syncLearningReminders,
+} from '@/services/reminderService';
 import { getSecureItem, setSecureItem } from '@/services/storage';
 import type { AppState, Category, ThemeMode } from '@/types/curio';
 import {
   getTodayDateString,
+  getWeekKey,
   isConsecutiveDay,
   isSameDay,
 } from '@/utils/date';
@@ -28,6 +33,8 @@ const initialState: AppState = {
 interface AppStore extends AppState {
   isHydrated: boolean;
   learningRemindersEnabled: boolean;
+  learningReminderHours: number[];
+  streakFreezeWeekKey: string | null;
   hydrate: () => Promise<void>;
   completeOnboarding: (interests: Category[]) => Promise<void>;
   completeWelcome: () => Promise<void>;
@@ -35,8 +42,10 @@ interface AppStore extends AppState {
   isBookmarked: (curioId: string) => boolean;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLearningRemindersEnabled: (enabled: boolean) => Promise<boolean>;
+  setLearningReminderHours: (hours: number[]) => Promise<boolean>;
   updateInterests: (interests: Category[]) => Promise<void>;
   recordDailyOpen: () => Promise<void>;
+  rescheduleReminders: () => Promise<void>;
   getTodaysCurio: () => Promise<string>;
   refreshTodaysCurio: () => Promise<string>;
   pickNextCurio: (
@@ -55,6 +64,32 @@ async function persistLearningRemindersEnabled(enabled: boolean) {
     STORAGE_KEYS.LEARNING_REMINDERS_ENABLED,
     enabled ? '1' : '0',
   );
+}
+
+async function persistLearningReminderHours(hours: number[]) {
+  await setSecureItem(
+    STORAGE_KEYS.LEARNING_REMINDER_HOURS,
+    JSON.stringify(normalizeReminderHours(hours)),
+  );
+}
+
+async function persistStreakFreezeWeek(weekKey: string | null) {
+  await setSecureItem(STORAGE_KEYS.STREAK_FREEZE_WEEK, weekKey ?? '');
+}
+
+async function pushReminderSchedule(getState: () => AppStore) {
+  const state = getState();
+  if (!state.learningRemindersEnabled) {
+    await syncLearningReminders({ enabled: false });
+    return false;
+  }
+
+  return syncLearningReminders({
+    enabled: true,
+    hours: state.learningReminderHours,
+    lastOpenDate: state.lastOpenDate,
+    streakAtRiskEnabled: true,
+  });
 }
 
 const MAX_PERSISTED_SEEN_IDS = 48;
@@ -80,15 +115,32 @@ export const useAppStore = create<AppStore>((set, get) => ({
   ...initialState,
   isHydrated: false,
   learningRemindersEnabled: true,
+  learningReminderHours: [...DEFAULT_REMINDER_HOURS],
+  streakFreezeWeekKey: null,
 
   hydrate: async () => {
-    const [stored, remindersRaw] = await Promise.all([
+    const [stored, remindersRaw, hoursRaw, freezeRaw] = await Promise.all([
       getSecureItem(STORAGE_KEYS.APP_STATE),
       getSecureItem(STORAGE_KEYS.LEARNING_REMINDERS_ENABLED),
+      getSecureItem(STORAGE_KEYS.LEARNING_REMINDER_HOURS),
+      getSecureItem(STORAGE_KEYS.STREAK_FREEZE_WEEK),
     ]);
 
     const learningRemindersEnabled =
       remindersRaw == null ? true : remindersRaw === '1';
+
+    let learningReminderHours = [...DEFAULT_REMINDER_HOURS];
+    if (hoursRaw) {
+      try {
+        learningReminderHours = normalizeReminderHours(
+          JSON.parse(hoursRaw) as number[],
+        );
+      } catch {
+        learningReminderHours = [...DEFAULT_REMINDER_HOURS];
+      }
+    }
+
+    const streakFreezeWeekKey = freezeRaw ? freezeRaw : null;
 
     if (stored) {
       try {
@@ -97,6 +149,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
           ...parsed,
           hasSeenWelcome: parsed.hasSeenWelcome ?? false,
           learningRemindersEnabled,
+          learningReminderHours,
+          streakFreezeWeekKey,
           isHydrated: true,
         });
         return;
@@ -104,7 +158,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
         // fall through to defaults
       }
     }
-    set({ learningRemindersEnabled, isHydrated: true });
+    set({
+      learningRemindersEnabled,
+      learningReminderHours,
+      streakFreezeWeekKey,
+      isHydrated: true,
+    });
   },
 
   reconcileForAuthUser: async (userId) => {
@@ -113,8 +172,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     clearPrefetchedNext();
     const reminders = get().learningRemindersEnabled;
+    const hours = get().learningReminderHours;
+    const freeze = get().streakFreezeWeekKey;
     const fresh = createFreshAppState();
-    set({ ...fresh, learningRemindersEnabled: reminders });
+    set({
+      ...fresh,
+      learningRemindersEnabled: reminders,
+      learningReminderHours: hours,
+      streakFreezeWeekKey: freeze,
+    });
     await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(fresh));
     await setSecureItem(STORAGE_KEYS.LOCAL_STATE_UPDATED_AT, new Date(0).toISOString());
     await setSecureItem(STORAGE_KEYS.LAST_AUTH_USER_ID, userId);
@@ -123,7 +189,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
   applySyncedState: async (state) => {
     clearPrefetchedNext();
     const reminders = get().learningRemindersEnabled;
-    set({ ...state, learningRemindersEnabled: reminders });
+    const hours = get().learningReminderHours;
+    const freeze = get().streakFreezeWeekKey;
+    set({
+      ...state,
+      learningRemindersEnabled: reminders,
+      learningReminderHours: hours,
+      streakFreezeWeekKey: freeze,
+    });
     await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
   },
 
@@ -190,14 +263,32 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!enabled) {
       set({ learningRemindersEnabled: false });
       await persistLearningRemindersEnabled(false);
-      await syncLearningReminders(false);
+      await syncLearningReminders({ enabled: false });
       return true;
     }
 
-    const scheduled = await syncLearningReminders(true);
-    set({ learningRemindersEnabled: scheduled });
-    await persistLearningRemindersEnabled(scheduled);
+    set({ learningRemindersEnabled: true });
+    await persistLearningRemindersEnabled(true);
+    const scheduled = await pushReminderSchedule(get);
+    if (!scheduled) {
+      set({ learningRemindersEnabled: false });
+      await persistLearningRemindersEnabled(false);
+    }
     return scheduled;
+  },
+
+  setLearningReminderHours: async (hours) => {
+    const normalized = normalizeReminderHours(hours);
+    set({ learningReminderHours: normalized });
+    await persistLearningReminderHours(normalized);
+
+    if (!get().learningRemindersEnabled) return true;
+    return pushReminderSchedule(get);
+  },
+
+  rescheduleReminders: async () => {
+    if (!get().learningRemindersEnabled) return;
+    await pushReminderSchedule(get);
   },
 
   updateInterests: async (interests) => {
@@ -218,21 +309,33 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const today = getTodayDateString();
 
     if (state.lastOpenDate && isSameDay(state.lastOpenDate, today)) {
+      await get().rescheduleReminders();
       return;
     }
 
     let streak = state.streak;
+    let streakFreezeWeekKey = state.streakFreezeWeekKey;
+    const weekKey = getWeekKey();
+
     if (!state.lastOpenDate) {
       streak = 1;
     } else if (isConsecutiveDay(state.lastOpenDate, today)) {
       streak += 1;
     } else {
-      streak = 1;
+      const freezeAvailable = streakFreezeWeekKey !== weekKey;
+      if (freezeAvailable && streak > 0) {
+        // One missed-day protection per calendar week.
+        streakFreezeWeekKey = weekKey;
+        await persistStreakFreezeWeek(weekKey);
+      } else {
+        streak = 1;
+      }
     }
 
     const next = { ...state, streak, lastOpenDate: today };
-    set(next);
+    set({ ...next, streakFreezeWeekKey });
     await persistState(next);
+    await get().rescheduleReminders();
   },
 
   getTodaysCurio: async () => {

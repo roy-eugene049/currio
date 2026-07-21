@@ -1,13 +1,22 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
-/** Four gentle nudges across waking hours (~every 4 hours). */
-export const LEARNING_REMINDER_HOURS = [9, 13, 17, 21] as const;
+import { getTodayDateString } from '@/utils/date';
 
-export const LEARNING_REMINDER_LABEL = '9am · 1pm · 5pm · 9pm';
+/** Hours users can pick from (local time). */
+export const REMINDER_HOUR_OPTIONS = [8, 9, 12, 13, 17, 18, 20, 21] as const;
+
+export const DEFAULT_REMINDER_HOURS = [9, 13, 21] as const;
+
+export const MIN_REMINDER_HOURS = 2;
+export const MAX_REMINDER_HOURS = 3;
+
+/** Evening nudge if they haven’t opened Currio yet today. */
+export const STREAK_AT_RISK_HOUR = 20;
 
 const CHANNEL_ID = 'learning-reminders';
-const IDENTIFIER_PREFIX = 'currio-learn-reminder-';
+const REMINDER_PREFIX = 'currio-learn-reminder-';
+const STREAK_RISK_ID = 'currio-streak-at-risk';
 
 const REMINDER_COPY = [
   {
@@ -41,6 +50,29 @@ function supportsLocalNotifications() {
   return Platform.OS === 'ios' || Platform.OS === 'android';
 }
 
+export function formatReminderHour(hour: number): string {
+  const suffix = hour >= 12 ? 'pm' : 'am';
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}${suffix}`;
+}
+
+export function formatReminderHoursLabel(hours: number[]): string {
+  if (hours.length === 0) return 'No times selected';
+  return [...hours].sort((a, b) => a - b).map(formatReminderHour).join(' · ');
+}
+
+export function normalizeReminderHours(hours: number[]): number[] {
+  const unique = [...new Set(hours)]
+    .filter((hour) => REMINDER_HOUR_OPTIONS.includes(hour as (typeof REMINDER_HOUR_OPTIONS)[number]))
+    .sort((a, b) => a - b);
+
+  if (unique.length >= MIN_REMINDER_HOURS) {
+    return unique.slice(0, MAX_REMINDER_HOURS);
+  }
+
+  return [...DEFAULT_REMINDER_HOURS];
+}
+
 async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
 
@@ -50,14 +82,6 @@ async function ensureAndroidChannel() {
     vibrationPattern: [0, 180],
     lightColor: '#6F00FF',
   });
-}
-
-export async function getLearningReminderPermissionStatus(): Promise<
-  Notifications.PermissionStatus | 'unsupported'
-> {
-  if (!supportsLocalNotifications()) return 'unsupported';
-  const { status } = await Notifications.getPermissionsAsync();
-  return status;
 }
 
 export async function requestLearningReminderPermission(): Promise<boolean> {
@@ -78,28 +102,23 @@ export async function cancelLearningReminders(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     scheduled
-      .filter((item) => item.identifier.startsWith(IDENTIFIER_PREFIX))
+      .filter(
+        (item) =>
+          item.identifier.startsWith(REMINDER_PREFIX) ||
+          item.identifier === STREAK_RISK_ID,
+      )
       .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
   );
 }
 
-export async function scheduleLearningReminders(): Promise<boolean> {
-  if (!supportsLocalNotifications()) return false;
-
-  const granted = await requestLearningReminderPermission();
-  if (!granted) {
-    await cancelLearningReminders();
-    return false;
-  }
-
-  await ensureAndroidChannel();
-  await cancelLearningReminders();
+async function scheduleDailyHourReminders(hours: number[]): Promise<void> {
+  const normalized = normalizeReminderHours(hours);
 
   await Promise.all(
-    LEARNING_REMINDER_HOURS.map((hour, index) => {
+    normalized.map((hour, index) => {
       const copy = REMINDER_COPY[index % REMINDER_COPY.length];
       return Notifications.scheduleNotificationAsync({
-        identifier: `${IDENTIFIER_PREFIX}${hour}`,
+        identifier: `${REMINDER_PREFIX}${hour}`,
         content: {
           title: copy.title,
           body: copy.body,
@@ -116,15 +135,83 @@ export async function scheduleLearningReminders(): Promise<boolean> {
       });
     }),
   );
+}
+
+function nextStreakRiskDate(lastOpenDate: string | null): Date {
+  const now = new Date();
+  const today = getTodayDateString();
+  const target = new Date(now);
+  target.setHours(STREAK_AT_RISK_HOUR, 0, 0, 0);
+
+  const openedToday = Boolean(lastOpenDate && lastOpenDate === today);
+
+  if (openedToday || now >= target) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  return target;
+}
+
+async function scheduleStreakAtRisk(lastOpenDate: string | null): Promise<void> {
+  const when = nextStreakRiskDate(lastOpenDate);
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: STREAK_RISK_ID,
+    content: {
+      title: 'Your streak is at risk',
+      body: 'Open Currio before the day ends and keep your learning streak alive.',
+      data: { type: 'streak_at_risk' },
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null),
+      sound: false,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: when,
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null),
+    },
+  });
+}
+
+export type SyncRemindersOptions = {
+  enabled: boolean;
+  hours?: number[];
+  lastOpenDate?: string | null;
+  streakAtRiskEnabled?: boolean;
+};
+
+export async function syncLearningReminders(
+  options: SyncRemindersOptions,
+): Promise<boolean> {
+  const {
+    enabled,
+    hours = [...DEFAULT_REMINDER_HOURS],
+    lastOpenDate = null,
+    streakAtRiskEnabled = true,
+  } = options;
+
+  if (!supportsLocalNotifications()) return false;
+
+  await cancelLearningReminders();
+
+  if (!enabled) return true;
+
+  const granted = await requestLearningReminderPermission();
+  if (!granted) return false;
+
+  await ensureAndroidChannel();
+  await scheduleDailyHourReminders(hours);
+
+  if (streakAtRiskEnabled) {
+    await scheduleStreakAtRisk(lastOpenDate);
+  }
 
   return true;
 }
 
-export async function syncLearningReminders(enabled: boolean): Promise<boolean> {
-  if (!enabled) {
-    await cancelLearningReminders();
-    return true;
-  }
+/** @deprecated Use formatReminderHoursLabel with stored hours */
+export const LEARNING_REMINDER_LABEL = formatReminderHoursLabel([
+  ...DEFAULT_REMINDER_HOURS,
+]);
 
-  return scheduleLearningReminders();
-}
+/** @deprecated Prefer DEFAULT_REMINDER_HOURS */
+export const LEARNING_REMINDER_HOURS = DEFAULT_REMINDER_HOURS;

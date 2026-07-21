@@ -100,10 +100,12 @@ export default function ProfileScreen() {
   const interests = useAppStore((s) => s.interests);
   const themeMode = useAppStore((s) => s.themeMode);
   const learningRemindersEnabled = useAppStore((s) => s.learningRemindersEnabled);
+  const learningReminderHours = useAppStore((s) => s.learningReminderHours);
   const bookmarks = useAppStore((s) => s.bookmarks);
   const streak = useAppStore((s) => s.streak);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const setLearningRemindersEnabled = useAppStore((s) => s.setLearningRemindersEnabled);
+  const setLearningReminderHours = useAppStore((s) => s.setLearningReminderHours);
   const updateInterests = useAppStore((s) => s.updateInterests);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -153,8 +155,12 @@ export default function ProfileScreen() {
     }
     showActionFeedback(
       'success',
-      enabled ? 'Reminders on — 9am, 1pm, 5pm, 9pm' : 'Learning reminders off',
+      enabled ? 'Reminders on' : 'Learning reminders off',
     );
+  };
+
+  const handleReminderHoursChange = async (hours: number[]) => {
+    await setLearningReminderHours(hours);
   };
 
   const handleSignOut = async () => {
@@ -279,7 +285,9 @@ export default function ProfileScreen() {
           />
           <LearningRemindersTile
             enabled={learningRemindersEnabled}
+            hours={learningReminderHours}
             onToggle={handleRemindersToggle}
+            onChangeHours={handleReminderHoursChange}
             palette={palette}
             delay={320}
           />

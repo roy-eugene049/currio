@@ -18,6 +18,16 @@ export function getTodayDateString(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/** ISO-like week key for streak freeze accounting, e.g. "2026-W30". */
+export function getWeekKey(date = new Date()): string {
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${target.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
 export function isSameDay(dateA: string, dateB: string): boolean {
   return dateA === dateB;
 }

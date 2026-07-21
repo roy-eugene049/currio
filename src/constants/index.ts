@@ -60,4 +60,6 @@ export const STORAGE_KEYS = {
   LAST_AUTH_USER_ID: 'currio_last_auth_user_id',
   LOCAL_STATE_UPDATED_AT: 'currio_local_state_updated_at',
   LEARNING_REMINDERS_ENABLED: 'currio_learning_reminders_enabled',
+  LEARNING_REMINDER_HOURS: 'currio_learning_reminder_hours',
+  STREAK_FREEZE_WEEK: 'currio_streak_freeze_week',
 } as const;

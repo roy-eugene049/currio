@@ -43,8 +43,7 @@ function HydrationGate({ children }: { children: ReactNode }) {
         await recordDailyOpen();
 
         if (useAppStore.getState().learningRemindersEnabled) {
-          const { syncLearningReminders } = await import('@/services/reminderService');
-          await syncLearningReminders(true);
+          await useAppStore.getState().rescheduleReminders();
         }
       })
       .finally(() => {
