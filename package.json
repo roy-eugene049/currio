@@ -17,9 +17,10 @@
     "curios:export": "node ./scripts/export-curios.mjs",
     "curios:seed": "node ./scripts/seed-curios.mjs",
     "supabase:deploy:welcome-email": "supabase functions deploy send-welcome-email --no-verify-jwt",
+    "supabase:deploy:weekly-digest": "supabase functions deploy send-weekly-digest --no-verify-jwt",
     "supabase:deploy:curio-feed": "supabase functions deploy curio-feed",
     "supabase:deploy:generate-curio": "supabase functions deploy generate-curio",
-    "supabase:deploy:functions": "supabase functions deploy curio-feed && supabase functions deploy generate-curio && supabase functions deploy send-welcome-email --no-verify-jwt",
+    "supabase:deploy:functions": "supabase functions deploy curio-feed && supabase functions deploy generate-curio && supabase functions deploy send-welcome-email --no-verify-jwt && supabase functions deploy send-weekly-digest --no-verify-jwt",
     "test:curio-feed": "node ./scripts/test-curio-feed.mjs",
     "build:apk": "eas build --platform android --profile preview",
     "build:apk:local": "eas build --platform android --profile preview --local"

@@ -33,6 +33,7 @@ drop table if exists public.curio_generations cascade;
 drop table if exists public.user_curio_queue cascade;
 drop table if exists public.user_seen_curios cascade;
 drop table if exists public.welcome_email_queue cascade;
+drop table if exists public.weekly_digest_queue cascade;
 drop table if exists public.bookmarks cascade;
 drop table if exists public.user_interests cascade;
 drop table if exists public.user_app_state cascade;
@@ -125,6 +126,7 @@ create table public.user_app_state (
     check (theme_mode in ('light', 'dark', 'system')),
   todays_curio_id text references public.curios (id) on delete set null,
   todays_curio_date date,
+  weekly_digest_enabled boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
@@ -286,6 +288,64 @@ create index idx_welcome_email_queue_user_id
 alter table public.welcome_email_queue enable row level security;
 
 -- No client policies: welcome email jobs are backend/service-role only.
+
+-- ── 11b. Weekly digest queue + recipient helper ───────────────────────────────
+
+create table public.weekly_digest_queue (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  email text not null,
+  week_key text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'sent', 'failed', 'skipped')),
+  curio_ids text[] not null default '{}',
+  provider_message_id text,
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, week_key)
+);
+
+create index idx_weekly_digest_queue_week_status
+  on public.weekly_digest_queue (week_key, status);
+create index idx_weekly_digest_queue_user_id
+  on public.weekly_digest_queue (user_id);
+
+alter table public.weekly_digest_queue enable row level security;
+
+create or replace function public.get_weekly_digest_recipients()
+returns table (
+  user_id uuid,
+  email text,
+  full_name text,
+  categories text[]
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    u.id as user_id,
+    u.email::text as email,
+    p.full_name,
+    coalesce(
+      array_agg(distinct ui.category) filter (where ui.category is not null),
+      '{}'::text[]
+    ) as categories
+  from auth.users u
+  inner join public.user_app_state s on s.user_id = u.id
+  left join public.profiles p on p.id = u.id
+  left join public.user_interests ui on ui.user_id = u.id
+  where s.weekly_digest_enabled = true
+    and u.email is not null
+    and length(trim(u.email)) > 0
+  group by u.id, u.email, p.full_name;
+$$;
+
+revoke all on function public.get_weekly_digest_recipients() from public;
+revoke all on function public.get_weekly_digest_recipients() from anon;
+revoke all on function public.get_weekly_digest_recipients() from authenticated;
+grant execute on function public.get_weekly_digest_recipients() to service_role;
 
 -- ── 12. Signup trigger (MUST be last — inserts app rows + email job) ──────────
 

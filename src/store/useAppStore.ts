@@ -28,6 +28,7 @@ const initialState: AppState = {
   themeMode: 'system',
   todaysCurioId: null,
   todaysCurioDate: null,
+  weeklyDigestEnabled: true,
 };
 
 interface AppStore extends AppState {
@@ -43,6 +44,7 @@ interface AppStore extends AppState {
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLearningRemindersEnabled: (enabled: boolean) => Promise<boolean>;
   setLearningReminderHours: (hours: number[]) => Promise<boolean>;
+  setWeeklyDigestEnabled: (enabled: boolean) => Promise<void>;
   updateInterests: (interests: Category[]) => Promise<void>;
   recordDailyOpen: () => Promise<void>;
   rescheduleReminders: () => Promise<void>;
@@ -148,6 +150,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         set({
           ...parsed,
           hasSeenWelcome: parsed.hasSeenWelcome ?? false,
+          weeklyDigestEnabled: parsed.weeklyDigestEnabled ?? true,
           learningRemindersEnabled,
           learningReminderHours,
           streakFreezeWeekKey,
@@ -255,6 +258,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setThemeMode: async (mode) => {
     const next = { ...get(), themeMode: mode };
+    set(next);
+    await persistState(next);
+  },
+
+  setWeeklyDigestEnabled: async (enabled) => {
+    const next = { ...get(), weeklyDigestEnabled: enabled };
     set(next);
     await persistState(next);
   },

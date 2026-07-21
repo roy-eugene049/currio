@@ -15,6 +15,7 @@ type RemoteAppStateRow = {
   theme_mode: ThemeMode;
   todays_curio_id: string | null;
   todays_curio_date: string | null;
+  weekly_digest_enabled?: boolean;
   updated_at: string;
 };
 
@@ -84,6 +85,7 @@ function remoteToAppState(
     themeMode: row.theme_mode,
     todaysCurioId: row.todays_curio_id,
     todaysCurioDate: row.todays_curio_date,
+    weeklyDigestEnabled: row.weekly_digest_enabled ?? true,
   };
 }
 
@@ -94,7 +96,7 @@ async function pullRemote(userId: string) {
     supabase
       .from('user_app_state')
       .select(
-        'user_id, has_completed_onboarding, has_seen_welcome, streak, last_open_date, theme_mode, todays_curio_id, todays_curio_date, updated_at',
+        'user_id, has_completed_onboarding, has_seen_welcome, streak, last_open_date, theme_mode, todays_curio_id, todays_curio_date, weekly_digest_enabled, updated_at',
       )
       .eq('user_id', userId)
       .maybeSingle(),
@@ -308,6 +310,7 @@ export async function pushAppState(): Promise<void> {
             theme_mode: state.themeMode,
             todays_curio_id: state.todaysCurioId,
             todays_curio_date: state.todaysCurioDate,
+            weekly_digest_enabled: state.weeklyDigestEnabled,
           },
           { onConflict: 'user_id' },
         )

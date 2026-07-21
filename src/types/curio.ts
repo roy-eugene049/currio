@@ -39,4 +39,5 @@ export interface AppState {
   themeMode: ThemeMode;
   todaysCurioId: string | null;
   todaysCurioDate: string | null;
+  weeklyDigestEnabled: boolean;
 }

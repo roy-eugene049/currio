@@ -20,6 +20,7 @@ import { LatestSavedCurrioSnapshot } from '@/components/profile/LatestSavedCurri
 import { LearningRemindersTile } from '@/components/profile/LearningRemindersTile';
 import { ProfileBentoStat } from '@/components/profile/ProfileBentoStat';
 import { ThemeAppearanceSection } from '@/components/profile/ThemeAppearanceSection';
+import { WeeklyDigestTile } from '@/components/profile/WeeklyDigestTile';
 import { TopicSelector } from '@/components/TopicSelector';
 import { APP_VERSION } from '@/constants';
 import { ENV } from '@/constants/env';
@@ -101,11 +102,13 @@ export default function ProfileScreen() {
   const themeMode = useAppStore((s) => s.themeMode);
   const learningRemindersEnabled = useAppStore((s) => s.learningRemindersEnabled);
   const learningReminderHours = useAppStore((s) => s.learningReminderHours);
+  const weeklyDigestEnabled = useAppStore((s) => s.weeklyDigestEnabled);
   const bookmarks = useAppStore((s) => s.bookmarks);
   const streak = useAppStore((s) => s.streak);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const setLearningRemindersEnabled = useAppStore((s) => s.setLearningRemindersEnabled);
   const setLearningReminderHours = useAppStore((s) => s.setLearningReminderHours);
+  const setWeeklyDigestEnabled = useAppStore((s) => s.setWeeklyDigestEnabled);
   const updateInterests = useAppStore((s) => s.updateInterests);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -161,6 +164,14 @@ export default function ProfileScreen() {
 
   const handleReminderHoursChange = async (hours: number[]) => {
     await setLearningReminderHours(hours);
+  };
+
+  const handleDigestToggle = async (enabled: boolean) => {
+    await setWeeklyDigestEnabled(enabled);
+    showActionFeedback(
+      'success',
+      enabled ? 'Weekly digest on' : 'Weekly digest off',
+    );
   };
 
   const handleSignOut = async () => {
@@ -290,6 +301,12 @@ export default function ProfileScreen() {
             onChangeHours={handleReminderHoursChange}
             palette={palette}
             delay={320}
+          />
+          <WeeklyDigestTile
+            enabled={weeklyDigestEnabled}
+            onToggle={handleDigestToggle}
+            palette={palette}
+            delay={360}
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>

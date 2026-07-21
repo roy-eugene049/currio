@@ -429,3 +429,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/send-welcome-email/deno.json"
 entrypoint = "./functions/send-welcome-email/index.ts"
+
+[functions.send-weekly-digest]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-weekly-digest/deno.json"
+entrypoint = "./functions/send-weekly-digest/index.ts"
