@@ -16,6 +16,7 @@
     "curios:generate": "node ./scripts/generate-curios.js",
     "curios:export": "node ./scripts/export-curios.mjs",
     "curios:seed": "node ./scripts/seed-curios.mjs",
+    "brand:assets": "python3 ./scripts/generate-brand-assets.py",
     "supabase:deploy:welcome-email": "supabase functions deploy send-welcome-email --no-verify-jwt",
     "supabase:deploy:weekly-digest": "supabase functions deploy send-weekly-digest --no-verify-jwt",
     "supabase:deploy:curio-feed": "supabase functions deploy curio-feed",

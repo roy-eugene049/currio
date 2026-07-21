@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { CurrioLogo } from '@/components/CurrioLogo';
 import { CurrioWordmark, CurrioWordmarkTagline } from '@/components/CurrioWordmark';
 import { BRAND } from '@/theme/brand';
 
@@ -93,7 +94,10 @@ export function AnimatedSplash({ ready, onComplete }: AnimatedSplashProps) {
       <View style={styles.background} />
 
       <Animated.View style={[styles.content, wordmarkWrapStyle]}>
-        <CurrioWordmark size={68} animate />
+        <CurrioLogo size={112} variant="hero" animate />
+        <View style={styles.wordmarkSlot}>
+          <CurrioWordmark size={56} animate />
+        </View>
         <Animated.View style={taglineWrapStyle}>
           <CurrioWordmarkTagline animate />
         </Animated.View>
@@ -107,15 +111,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BRAND.electric,
+    backgroundColor: BRAND.deep,
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: BRAND.electric,
+    backgroundColor: BRAND.deep,
   },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+  },
+  wordmarkSlot: {
+    marginTop: 28,
   },
 });
