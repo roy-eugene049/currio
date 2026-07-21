@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeIn,
   useAnimatedStyle,
@@ -18,6 +18,7 @@ import { AppChromeChip } from '@/components/ui/AppChromeChip';
 import { GlassChip } from '@/components/ui/GlassChip';
 import { CATEGORY_ICONS } from '@/constants';
 import { useCurioExperience } from '@/hooks/useCurioExperience';
+import { useShareCurio } from '@/hooks/useShareCurio';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { BRAND } from '@/theme/brand';
@@ -50,6 +51,7 @@ export function CurioReader({
   const streak = useAppStore((s) => s.streak);
   const theme = getCategoryTheme(curio.category);
   const { backdropUrl } = useCurioExperience(curio);
+  const { share, capturePortal } = useShareCurio(curio);
   const isSavedView = variant === 'saved';
   const categoryIcon = CATEGORY_ICONS[curio.category] as keyof typeof Ionicons.glyphMap;
   const nextScale = useSharedValue(1);
@@ -60,10 +62,8 @@ export function CurioReader({
     transform: [{ scale: nextScale.value }],
   }));
 
-  const handleShare = async () => {
-    await Share.share({
-      message: `${curio.title}\n\n${curio.content}\n\n— Currio`,
-    });
+  const handleShare = () => {
+    share();
   };
 
   const handleNext = () => {
@@ -253,7 +253,11 @@ export function CurioReader({
               <BookmarkButton curioId={curio.id} size={19} />
             </AppChromeChip>
             <AppChromeChip style={styles.iconBtn}>
-              <Pressable onPress={handleShare} hitSlop={8} accessibilityLabel="Share">
+              <Pressable
+                onPress={handleShare}
+                hitSlop={8}
+                accessibilityLabel="Share"
+              >
                 <Ionicons name="share-outline" size={19} color={colors.icon} />
               </Pressable>
             </AppChromeChip>
@@ -261,6 +265,7 @@ export function CurioReader({
         </View>
       )}
 
+      {capturePortal}
       {isSavedView ? (
         <View
           pointerEvents="none"

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Share, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { BookmarkButton } from '@/components/BookmarkButton';
 import { CategoryChip } from '@/components/CategoryChip';
+import { ShareCurioButton } from '@/components/share/ShareCurioButton';
 import { useTheme } from '@/hooks/useTheme';
 import type { Curio } from '@/types/curio';
 
@@ -13,25 +14,13 @@ interface CurioCardProps {
 export function CurioCard({ curio }: CurioCardProps) {
   const { colors } = useTheme();
 
-  const handleShare = async () => {
-    const message = `${curio.title}\n\n${curio.content}\n\n— Currio`;
-    await Share.share({ message });
-  };
-
   return (
     <View className="gap-5">
       <View className="flex-row items-center justify-between">
         <CategoryChip category={curio.category} size="sm" />
         <View className="flex-row items-center gap-4">
           <BookmarkButton curioId={curio.id} />
-          <Pressable
-            onPress={handleShare}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Share currio"
-          >
-            <Ionicons name="share-outline" size={24} color={colors.textMuted} />
-          </Pressable>
+          <ShareCurioButton curio={curio} color={colors.textMuted} size={24} hitSlop={12} />
         </View>
       </View>
 

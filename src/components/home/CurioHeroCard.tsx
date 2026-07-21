@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { BookmarkButton } from '@/components/BookmarkButton';
+import { ShareCurioButton } from '@/components/share/ShareCurioButton';
 import { CATEGORY_ICONS } from '@/constants';
 import { useTheme } from '@/hooks/useTheme';
 import type { Curio } from '@/types/curio';
@@ -15,11 +16,6 @@ interface CurioHeroCardProps {
 
 export function CurioHeroCard({ curio, delay = 0 }: CurioHeroCardProps) {
   const { colors, isDark } = useTheme();
-
-  const handleShare = async () => {
-    const message = `${curio.title}\n\n${curio.content}\n\n— Currio`;
-    await Share.share({ message });
-  };
 
   return (
     <Animated.View
@@ -52,9 +48,7 @@ export function CurioHeroCard({ curio, delay = 0 }: CurioHeroCardProps) {
             </View>
             <View style={styles.actions}>
               <BookmarkButton curioId={curio.id} size={22} />
-              <Pressable onPress={handleShare} hitSlop={12} accessibilityLabel="Share">
-                <Ionicons name="share-outline" size={22} color={colors.textMuted} />
-              </Pressable>
+              <ShareCurioButton curio={curio} color={colors.textMuted} size={22} hitSlop={12} />
             </View>
           </View>
 
