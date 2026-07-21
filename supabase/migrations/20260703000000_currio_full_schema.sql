@@ -32,6 +32,7 @@ drop table if exists public.curio_feedback cascade;
 drop table if exists public.curio_generations cascade;
 drop table if exists public.user_curio_queue cascade;
 drop table if exists public.user_seen_curios cascade;
+drop table if exists public.welcome_email_queue cascade;
 drop table if exists public.bookmarks cascade;
 drop table if exists public.user_interests cascade;
 drop table if exists public.user_app_state cascade;
@@ -262,7 +263,31 @@ create policy "Feedback: users manage own rows"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- ── 11. Signup trigger (MUST be last — inserts into profiles + user_app_state) ─
+-- ── 11. Welcome email queue ───────────────────────────────────────────────────
+
+create table public.welcome_email_queue (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  email text not null,
+  full_name text,
+  status text not null default 'pending'
+    check (status in ('pending', 'sent', 'failed')),
+  provider_message_id text,
+  error_message text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index idx_welcome_email_queue_status_created
+  on public.welcome_email_queue (status, created_at);
+create index idx_welcome_email_queue_user_id
+  on public.welcome_email_queue (user_id);
+
+alter table public.welcome_email_queue enable row level security;
+
+-- No client policies: welcome email jobs are backend/service-role only.
+
+-- ── 12. Signup trigger (MUST be last — inserts app rows + email job) ──────────
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -270,15 +295,19 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  display_name text;
 begin
+  display_name := coalesce(
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'name',
+    split_part(coalesce(new.email, 'user'), '@', 1)
+  );
+
   insert into public.profiles (id, full_name, avatar_url)
   values (
     new.id,
-    coalesce(
-      new.raw_user_meta_data->>'full_name',
-      new.raw_user_meta_data->>'name',
-      split_part(coalesce(new.email, 'user'), '@', 1)
-    ),
+    display_name,
     new.raw_user_meta_data->>'avatar_url'
   )
   on conflict (id) do nothing;
@@ -286,6 +315,11 @@ begin
   insert into public.user_app_state (user_id)
   values (new.id)
   on conflict (user_id) do nothing;
+
+  if new.email is not null then
+    insert into public.welcome_email_queue (user_id, email, full_name)
+    values (new.id, new.email, display_name);
+  end if;
 
   return new;
 end;
@@ -295,7 +329,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ── 12. Grants (Supabase roles) ───────────────────────────────────────────────
+-- ── 13. Grants (Supabase roles) ───────────────────────────────────────────────
 
 grant usage on schema public to postgres, anon, authenticated, service_role;
 

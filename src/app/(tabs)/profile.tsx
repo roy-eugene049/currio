@@ -17,6 +17,7 @@ import { CategoryChip } from '@/components/CategoryChip';
 import { AnimatedTabScreen } from '@/components/navigation/AnimatedTabScreen';
 import { getTabBarInset } from '@/components/navigation/FloatingTabBar';
 import { LatestSavedCurrioSnapshot } from '@/components/profile/LatestSavedCurrioSnapshot';
+import { LearningRemindersTile } from '@/components/profile/LearningRemindersTile';
 import { ProfileBentoStat } from '@/components/profile/ProfileBentoStat';
 import { ThemeAppearanceSection } from '@/components/profile/ThemeAppearanceSection';
 import { TopicSelector } from '@/components/TopicSelector';
@@ -98,9 +99,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const interests = useAppStore((s) => s.interests);
   const themeMode = useAppStore((s) => s.themeMode);
+  const learningRemindersEnabled = useAppStore((s) => s.learningRemindersEnabled);
   const bookmarks = useAppStore((s) => s.bookmarks);
   const streak = useAppStore((s) => s.streak);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
+  const setLearningRemindersEnabled = useAppStore((s) => s.setLearningRemindersEnabled);
   const updateInterests = useAppStore((s) => s.updateInterests);
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -137,6 +140,21 @@ export default function ProfileScreen() {
 
   const handleThemeSelect = async (mode: ThemeMode) => {
     await setThemeMode(mode);
+  };
+
+  const handleRemindersToggle = async (enabled: boolean) => {
+    const ok = await setLearningRemindersEnabled(enabled);
+    if (enabled && !ok) {
+      showActionFeedback(
+        'error',
+        'Enable notifications in Settings to get learning reminders.',
+      );
+      return;
+    }
+    showActionFeedback(
+      'success',
+      enabled ? 'Reminders on — 9am, 1pm, 5pm, 9pm' : 'Learning reminders off',
+    );
   };
 
   const handleSignOut = async () => {
@@ -258,6 +276,12 @@ export default function ProfileScreen() {
             palette={palette}
             contentPadding={22}
             delay={240}
+          />
+          <LearningRemindersTile
+            enabled={learningRemindersEnabled}
+            onToggle={handleRemindersToggle}
+            palette={palette}
+            delay={320}
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
