@@ -152,13 +152,13 @@ export default function ProfileScreen() {
     if (enabled && !ok) {
       showActionFeedback(
         'error',
-        'Enable notifications in Settings to get learning reminders.',
+        'Enable notifications in Settings to get curiosity nudges.',
       );
       return;
     }
     showActionFeedback(
       'success',
-      enabled ? 'Reminders on' : 'Learning reminders off',
+      enabled ? 'Curiosity nudges on' : 'Curiosity nudges off',
     );
   };
 
@@ -283,7 +283,7 @@ export default function ProfileScreen() {
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
-            Preferences
+            {'// look & feel'}
           </Text>
           <ThemeAppearanceSection
             themeMode={themeMode}
@@ -294,19 +294,23 @@ export default function ProfileScreen() {
             contentPadding={22}
             delay={240}
           />
+
+          <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>
+            {'// stay curious'}
+          </Text>
           <LearningRemindersTile
             enabled={learningRemindersEnabled}
             hours={learningReminderHours}
             onToggle={handleRemindersToggle}
             onChangeHours={handleReminderHoursChange}
             palette={palette}
-            delay={320}
+            delay={300}
           />
           <WeeklyDigestTile
             enabled={weeklyDigestEnabled}
             onToggle={handleDigestToggle}
             palette={palette}
-            delay={360}
+            delay={340}
           />
 
           <Text style={[styles.sectionTag, { color: palette.sectionTag }]}>

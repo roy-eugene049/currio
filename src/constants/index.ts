@@ -53,7 +53,7 @@ export const COLORS = {
   borderDark: '#334155',
 } as const;
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 
 export const STORAGE_KEYS = {
   APP_STATE: 'currio_app_state',
