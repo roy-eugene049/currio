@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Linking,
+  AppState,
   Platform,
   Pressable,
   StyleSheet,
@@ -21,12 +20,11 @@ import {
   formatNextNudgeLabel,
   formatReminderTime,
   formatReminderTimesLabel,
+  getSoonestUpcomingNudge,
   MAX_REMINDER_TIMES,
   MIN_REMINDER_TIMES,
-  nextOccurrenceDate,
   openExactAlarmSettings,
   reminderTimeKey,
-  scheduleTestNudge,
   type ReminderTime,
 } from '@/services/reminderService';
 import { BRAND } from '@/theme/brand';
@@ -157,8 +155,19 @@ export function LearningRemindersTile({
 }: LearningRemindersTileProps) {
   const { isDark } = useTheme();
   const [picker, setPicker] = useState<PickerMode>(null);
-  const [testing, setTesting] = useState(false);
-  const [testHint, setTestHint] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => setNowTick(Date.now()), 30_000);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNowTick(Date.now());
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, [enabled]);
 
   const sortedTimes = useMemo(
     () =>
@@ -169,12 +178,10 @@ export function LearningRemindersTile({
   );
 
   const nextNudgeLabel = useMemo(() => {
-    if (sortedTimes.length === 0) return null;
-    const upcoming = [...sortedTimes]
-      .map((time) => ({ time, at: nextOccurrenceDate(time).getTime() }))
-      .sort((a, b) => a.at - b.at)[0];
-    return upcoming ? formatNextNudgeLabel(upcoming.time) : null;
-  }, [sortedTimes]);
+    if (!enabled || sortedTimes.length === 0) return null;
+    const upcoming = getSoonestUpcomingNudge(sortedTimes, new Date(nowTick));
+    return upcoming ? formatNextNudgeLabel(upcoming.time, new Date(nowTick)) : null;
+  }, [enabled, sortedTimes, nowTick]);
 
   const canAdd = times.length < MAX_REMINDER_TIMES;
   const canRemove = times.length > MIN_REMINDER_TIMES;
@@ -230,23 +237,6 @@ export function LearningRemindersTile({
       times.filter((t) => reminderTimeKey(t) !== reminderTimeKey(current)),
     );
     closePicker();
-  };
-
-  const handleTestNudge = async () => {
-    if (testing) return;
-    setTesting(true);
-    setTestHint(null);
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const ok = await scheduleTestNudge(8);
-      setTestHint(
-        ok
-          ? 'Test nudge in ~8 seconds — leave the app briefly to see it.'
-          : 'Notifications are blocked. Open Settings to allow them.',
-      );
-    } finally {
-      setTesting(false);
-    }
   };
 
   return (
@@ -467,86 +457,69 @@ export function LearningRemindersTile({
                   )}
                 </View>
 
-                <View style={styles.footerActions}>
+                {Platform.OS === 'android' ? (
                   <Pressable
-                    onPress={() => void handleTestNudge()}
-                    disabled={testing}
+                    onPress={() => void openExactAlarmSettings()}
                     accessibilityRole="button"
-                    accessibilityLabel="Send a test nudge"
+                    accessibilityLabel="Allow exact alarms for nudges"
                   >
                     {({ pressed }) => (
                       <View
                         style={[
-                          styles.testBtn,
+                          styles.exactAlarmRow,
                           {
                             backgroundColor: isDark
-                              ? `${BRAND.electric}22`
-                              : `${BRAND.electric}12`,
+                              ? `${BRAND.electric}18`
+                              : `${BRAND.electric}0C`,
+                            borderColor: isDark
+                              ? `${BRAND.lavender}28`
+                              : `${BRAND.electric}18`,
                             opacity: pressed ? 0.88 : 1,
                           },
                         ]}
                       >
-                        {testing ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={BRAND.electric}
-                          />
-                        ) : (
-                          <Ionicons
-                            name="flash-outline"
-                            size={15}
-                            color={BRAND.electric}
-                          />
-                        )}
-                        <Text
+                        <View
                           style={[
-                            styles.testBtnLabel,
-                            { color: BRAND.electric },
+                            styles.rowIcon,
+                            {
+                              backgroundColor: isDark
+                                ? `${BRAND.electric}33`
+                                : `${BRAND.electric}14`,
+                            },
                           ]}
                         >
-                          Send test nudge
-                        </Text>
+                          <Ionicons
+                            name="alarm-outline"
+                            size={16}
+                            color={BRAND.electric}
+                          />
+                        </View>
+                        <View style={styles.exactAlarmCopy}>
+                          <Text
+                            style={[
+                              styles.exactAlarmTitle,
+                              { color: palette.tileTitle },
+                            ]}
+                          >
+                            Allow exact alarms
+                          </Text>
+                          <Text
+                            style={[
+                              styles.exactAlarmMeta,
+                              { color: palette.tileSubtitle },
+                            ]}
+                          >
+                            Required so nudges fire at your chosen times
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="open-outline"
+                          size={16}
+                          color={palette.tileSubtitle}
+                        />
                       </View>
                     )}
                   </Pressable>
-
-                  <Pressable
-                    onPress={() =>
-                      void (Platform.OS === 'android'
-                        ? openExactAlarmSettings()
-                        : Linking.openSettings())
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      Platform.OS === 'android'
-                        ? 'Allow exact alarms for nudges'
-                        : 'Open notification settings'
-                    }
-                  >
-                    {({ pressed }) => (
-                      <Text
-                        style={[
-                          styles.settingsLinkLabel,
-                          {
-                            color: palette.tileSubtitle,
-                            opacity: pressed ? 0.7 : 1,
-                          },
-                        ]}
-                      >
-                        {Platform.OS === 'android'
-                          ? 'Allow exact alarms'
-                          : 'Notification settings'}
-                      </Text>
-                    )}
-                  </Pressable>
-                </View>
-
-                {testHint ? (
-                  <Text
-                    style={[styles.testHint, { color: palette.tileSubtitle }]}
-                  >
-                    {testHint}
-                  </Text>
                 ) : null}
               </Animated.View>
             ) : null}
@@ -757,35 +730,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 4,
   },
-  footerActions: {
+  exactAlarmRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  testBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
+    flexWrap: 'nowrap',
+    width: '100%',
+    minHeight: 56,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  testBtnLabel: {
-    fontSize: 12,
+  exactAlarmCopy: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    marginRight: 8,
+    gap: 2,
+  },
+  exactAlarmTitle: {
+    fontSize: 14,
     fontWeight: '800',
   },
-  settingsLinkLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  testHint: {
-    fontSize: 12,
-    lineHeight: 16,
+  exactAlarmMeta: {
+    fontSize: 11,
     fontWeight: '600',
+    lineHeight: 15,
   },
 });

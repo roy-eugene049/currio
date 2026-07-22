@@ -306,10 +306,113 @@ export function nextOccurrenceDate(time: ReminderTime, from = new Date()): Date 
   const target = new Date(from);
   target.setSeconds(0, 0);
   target.setHours(clampHour(time.hour), clampMinute(time.minute), 0, 0);
-  if (target.getTime() <= from.getTime() + 1500) {
+  // Treat "now or already passed" as tomorrow so the UI never sticks on a past slot.
+  if (target.getTime() <= from.getTime()) {
     target.setDate(target.getDate() + 1);
   }
   return target;
+}
+
+/** Soonest upcoming reminder among the list. */
+export function getSoonestUpcomingNudge(
+  times: ReminderTime[],
+  from = new Date(),
+): { time: ReminderTime; at: Date } | null {
+  if (times.length === 0) return null;
+  const ranked = times
+    .map((time) => ({ time, at: nextOccurrenceDate(time, from) }))
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
+  return ranked[0] ?? null;
+}
+
+function formatDurationUntil(target: Date, from: Date): string {
+  const ms = Math.max(0, target.getTime() - from.getTime());
+  const totalMinutes = Math.round(ms / 60_000);
+  if (totalMinutes < 1) return 'less than a minute';
+  if (totalMinutes < 60) {
+    return totalMinutes === 1 ? '1 minute' : `${totalMinutes} minutes`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) {
+    if (minutes === 0) return hours === 1 ? '1 hour' : `${hours} hours`;
+    return `${hours}h ${minutes}m`;
+  }
+  const days = Math.floor(hours / 24);
+  return days === 1 ? '1 day' : `${days} days`;
+}
+
+/** Human label for when the next custom nudge will fire. */
+export function formatNextNudgeLabel(
+  time: ReminderTime,
+  from = new Date(),
+): string {
+  const next = nextOccurrenceDate(time, from);
+  const when = formatReminderTime(time);
+  const today = new Date(from);
+  const tomorrow = new Date(from);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const inLabel = formatDurationUntil(next, from);
+
+  if (sameDay(next, today)) {
+    return `Next nudge in ${inLabel} · ${when}`;
+  }
+  if (sameDay(next, tomorrow)) {
+    return `Next nudge tomorrow at ${when}`;
+  }
+  return `Next nudge ${next.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} at ${when}`;
+}
+
+/**
+ * Android 12+ may require an explicit “Alarms & reminders” grant for exact times.
+ * Opens Currio’s exact-alarm system screen when possible.
+ */
+export async function openExactAlarmSettings(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    await Linking.openSettings();
+    return;
+  }
+
+  const pkg = 'com.twiicetech.currio';
+  try {
+    const IntentLauncher = await import('expo-intent-launcher');
+    await IntentLauncher.startActivityAsync(
+      'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+      { data: `package:${pkg}` },
+    );
+    return;
+  } catch {
+    // fall through
+  }
+
+  try {
+    const IntentLauncher = await import('expo-intent-launcher');
+    await IntentLauncher.startActivityAsync(
+      IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
+      { data: `package:${pkg}` },
+    );
+    return;
+  } catch {
+    // fall through
+  }
+
+  try {
+    await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', [
+      { key: 'android.provider.extra.APP_PACKAGE', value: pkg },
+    ]);
+  } catch {
+    await Linking.openSettings();
+  }
 }
 
 function androidTriggerExtras() {
@@ -516,54 +619,6 @@ export async function getScheduledNudgeCount(): Promise<number> {
       item.identifier.startsWith(REMINDER_PREFIX) ||
       item.identifier === STREAK_RISK_ID,
   ).length;
-}
-
-/** Human label for when the next custom nudge will fire. */
-export function formatNextNudgeLabel(time: ReminderTime, from = new Date()): string {
-  const next = nextOccurrenceDate(time, from);
-  const today = new Date(from);
-  const tomorrow = new Date(from);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const sameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
-  const when = formatReminderTime(time);
-  if (sameDay(next, today)) return `Next nudge today at ${when}`;
-  if (sameDay(next, tomorrow)) return `Next nudge tomorrow at ${when}`;
-  return `Next nudge ${next.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })} at ${when}`;
-}
-
-/**
- * Android 12+ may require an explicit “Alarms & reminders” grant for exact times.
- * Opens the system screen when possible.
- */
-export async function openExactAlarmSettings(): Promise<void> {
-  if (Platform.OS !== 'android') {
-    await Linking.openSettings();
-    return;
-  }
-
-  const pkg = 'com.twiicetech.currio';
-  try {
-    await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', [
-      { key: 'android.provider.extra.APP_PACKAGE', value: pkg },
-    ]);
-  } catch {
-    try {
-      await Linking.openURL(
-        `package:${pkg}`,
-      );
-    } catch {
-      await Linking.openSettings();
-    }
-  }
 }
 
 /** @deprecated Use formatReminderTimesLabel with stored times */

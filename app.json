@@ -2,7 +2,7 @@
   "expo": {
     "name": "currio",
     "slug": "currio",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "currio",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.twiicetech.currio",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#31006E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -56,7 +56,26 @@
           "defaultChannel": "curiosity-nudges-v2"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "DailyCurio",
+              "label": "Today’s Currio",
+              "description": "Today’s curio title — tap to open Currio",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "previewImage": "./assets/widget-preview/daily-curio.png",
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical"
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

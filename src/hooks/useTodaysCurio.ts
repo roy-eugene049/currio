@@ -111,7 +111,14 @@ export function useTodaysCurio() {
   useEffect(() => {
     if (!query.data) return;
     warmPrefetch(query.data);
-  }, [query.data?.id, query.data?.category, warmPrefetch]);
+    void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+      syncDailyCurioWidget({
+        id: query.data!.id,
+        title: query.data!.title,
+        category: query.data!.category,
+      }),
+    );
+  }, [query.data?.id, query.data?.category, query.data?.title, warmPrefetch]);
 
   const countedDailyIdRef = useRef<string | null>(null);
 

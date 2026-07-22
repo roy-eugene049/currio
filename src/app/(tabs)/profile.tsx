@@ -31,7 +31,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type { ReminderTime } from '@/services/reminderService';
 import {
   formatNextNudgeLabel,
-  nextOccurrenceDate,
+  getSoonestUpcomingNudge,
 } from '@/services/reminderService';
 import { BRAND } from '@/theme/brand';
 import type { Category, ThemeMode } from '@/types/curio';
@@ -177,10 +177,7 @@ export default function ProfileScreen() {
       return;
     }
 
-    const upcoming = [...times]
-      .map((time) => ({ time, at: nextOccurrenceDate(time).getTime() }))
-      .sort((a, b) => a.at - b.at)[0];
-
+    const upcoming = getSoonestUpcomingNudge(times);
     showActionFeedback(
       'success',
       upcoming
