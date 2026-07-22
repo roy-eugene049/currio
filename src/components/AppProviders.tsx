@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, type AppStateStatus, View } from 'react-native';
 
 import { OAuthNavigationEffect } from '@/components/OAuthNavigationEffect';
 import { AuthSessionGuard } from '@/components/AuthSessionGuard';
@@ -20,6 +20,26 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function ReminderRescheduleOnForeground() {
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    const onChange = (next: AppStateStatus) => {
+      const wasBackground =
+        appState.current === 'background' || appState.current === 'inactive';
+      appState.current = next;
+      if (!wasBackground || next !== 'active') return;
+      if (!useAppStore.getState().learningRemindersEnabled) return;
+      void useAppStore.getState().rescheduleReminders();
+    };
+
+    const sub = AppState.addEventListener('change', onChange);
+    return () => sub.remove();
+  }, []);
+
+  return null;
+}
 
 function HydrationGate({ children }: { children: ReactNode }) {
   const hydrate = useAppStore((s) => s.hydrate);
@@ -68,6 +88,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <HydrationGate>
+        <ReminderRescheduleOnForeground />
         <OAuthNavigationEffect />
         <AuthSessionGuard />
         {children}

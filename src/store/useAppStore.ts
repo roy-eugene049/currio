@@ -4,9 +4,11 @@ import { STORAGE_KEYS } from '@/constants';
 import { clearPrefetchedNext } from '@/services/curioPrefetchService';
 import { pickRandomCurio, getCurioById } from '@/services/curioService';
 import {
-  DEFAULT_REMINDER_HOURS,
-  normalizeReminderHours,
+  DEFAULT_REMINDER_TIMES,
+  normalizeReminderTimes,
+  parseStoredReminderTimes,
   syncLearningReminders,
+  type ReminderTime,
 } from '@/services/reminderService';
 import { getSecureItem, setSecureItem } from '@/services/storage';
 import type { AppState, Category, CurioCollection, ThemeMode } from '@/types/curio';
@@ -41,7 +43,7 @@ const initialState: AppState = {
 interface AppStore extends AppState {
   isHydrated: boolean;
   learningRemindersEnabled: boolean;
-  learningReminderHours: number[];
+  learningReminderTimes: ReminderTime[];
   streakFreezeWeekKey: string | null;
   hydrate: () => Promise<void>;
   completeOnboarding: (interests: Category[]) => Promise<void>;
@@ -54,7 +56,7 @@ interface AppStore extends AppState {
   toggleCurioCollection: (collectionId: string, curioId: string) => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLearningRemindersEnabled: (enabled: boolean) => Promise<boolean>;
-  setLearningReminderHours: (hours: number[]) => Promise<boolean>;
+  setLearningReminderTimes: (times: ReminderTime[]) => Promise<boolean>;
   setWeeklyDigestEnabled: (enabled: boolean) => Promise<void>;
   applyChallengeStreakBonus: () => Promise<boolean>;
   updateInterests: (interests: Category[]) => Promise<void>;
@@ -80,10 +82,10 @@ async function persistLearningRemindersEnabled(enabled: boolean) {
   );
 }
 
-async function persistLearningReminderHours(hours: number[]) {
+async function persistLearningReminderTimes(times: ReminderTime[]) {
   await setSecureItem(
     STORAGE_KEYS.LEARNING_REMINDER_HOURS,
-    JSON.stringify(normalizeReminderHours(hours)),
+    JSON.stringify(normalizeReminderTimes(times)),
   );
 }
 
@@ -100,7 +102,7 @@ async function pushReminderSchedule(getState: () => AppStore) {
 
   return syncLearningReminders({
     enabled: true,
-    hours: state.learningReminderHours,
+    times: state.learningReminderTimes,
     lastOpenDate: state.lastOpenDate,
     streakAtRiskEnabled: true,
   });
@@ -129,7 +131,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   ...initialState,
   isHydrated: false,
   learningRemindersEnabled: true,
-  learningReminderHours: [...DEFAULT_REMINDER_HOURS],
+  learningReminderTimes: [...DEFAULT_REMINDER_TIMES],
   streakFreezeWeekKey: null,
 
   hydrate: async () => {
@@ -143,14 +145,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const learningRemindersEnabled =
       remindersRaw == null ? true : remindersRaw === '1';
 
-    let learningReminderHours = [...DEFAULT_REMINDER_HOURS];
+    let learningReminderTimes = [...DEFAULT_REMINDER_TIMES];
     if (hoursRaw) {
       try {
-        learningReminderHours = normalizeReminderHours(
-          JSON.parse(hoursRaw) as number[],
-        );
+        learningReminderTimes = parseStoredReminderTimes(JSON.parse(hoursRaw));
       } catch {
-        learningReminderHours = [...DEFAULT_REMINDER_HOURS];
+        learningReminderTimes = [...DEFAULT_REMINDER_TIMES];
       }
     }
 
@@ -165,7 +165,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           weeklyDigestEnabled: parsed.weeklyDigestEnabled ?? true,
           collections: Array.isArray(parsed.collections) ? parsed.collections : [],
           learningRemindersEnabled,
-          learningReminderHours,
+          learningReminderTimes,
           streakFreezeWeekKey,
           isHydrated: true,
         });
@@ -176,7 +176,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     set({
       learningRemindersEnabled,
-      learningReminderHours,
+      learningReminderTimes,
       streakFreezeWeekKey,
       isHydrated: true,
     });
@@ -188,13 +188,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     clearPrefetchedNext();
     const reminders = get().learningRemindersEnabled;
-    const hours = get().learningReminderHours;
+    const times = get().learningReminderTimes;
     const freeze = get().streakFreezeWeekKey;
     const fresh = createFreshAppState();
     set({
       ...fresh,
       learningRemindersEnabled: reminders,
-      learningReminderHours: hours,
+      learningReminderTimes: times,
       streakFreezeWeekKey: freeze,
     });
     await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(fresh));
@@ -205,12 +205,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   applySyncedState: async (state) => {
     clearPrefetchedNext();
     const reminders = get().learningRemindersEnabled;
-    const hours = get().learningReminderHours;
+    const times = get().learningReminderTimes;
     const freeze = get().streakFreezeWeekKey;
     set({
       ...state,
       learningRemindersEnabled: reminders,
-      learningReminderHours: hours,
+      learningReminderTimes: times,
       streakFreezeWeekKey: freeze,
     });
     await setSecureItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
@@ -378,10 +378,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return scheduled;
   },
 
-  setLearningReminderHours: async (hours) => {
-    const normalized = normalizeReminderHours(hours);
-    set({ learningReminderHours: normalized });
-    await persistLearningReminderHours(normalized);
+  setLearningReminderTimes: async (times) => {
+    const normalized = normalizeReminderTimes(times);
+    set({ learningReminderTimes: normalized });
+    await persistLearningReminderTimes(normalized);
 
     if (!get().learningRemindersEnabled) return true;
     return pushReminderSchedule(get);

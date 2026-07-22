@@ -4,7 +4,7 @@
 
 Currio is a curiosity micro-learning app — bite-sized curios, streaks that stay gentle, topics you choose, and tools that help facts stick. Built with Expo (SDK 54) and Supabase.
 
-**Current version:** [1.2.0](./docs/RELEASE_NOTES.md) · [Release notes](./docs/RELEASE_NOTES.md)
+**Current version:** [1.3.0](./docs/RELEASE_NOTES.md) · [Release notes](./docs/RELEASE_NOTES.md)
 
 ---
 

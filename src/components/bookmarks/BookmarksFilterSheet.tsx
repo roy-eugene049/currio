@@ -38,6 +38,10 @@ interface BookmarksFilterSheetProps {
   palette: ProfilePalette;
 }
 
+/**
+ * Horizontal filter row: [icon] label · count [check]
+ * Layout on inner View so Android / Expo Go apply flex correctly.
+ */
 function FilterRow({
   icon,
   label,
@@ -62,9 +66,95 @@ function FilterRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      style={({ pressed }) => [
+    >
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.row,
+            {
+              backgroundColor: pressed
+                ? isDark
+                  ? `${BRAND.electric}44`
+                  : `${BRAND.electric}18`
+                : selected
+                  ? isDark
+                    ? `${BRAND.electric}40`
+                    : `${BRAND.electric}14`
+                  : isDark
+                    ? `${BRAND.deepMuted}CC`
+                    : '#FFFFFF',
+              borderColor: selected
+                ? BRAND.electric
+                : isDark
+                  ? `${BRAND.lavender}28`
+                  : `${BRAND.electric}18`,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.rowIcon,
+              {
+                backgroundColor: selected
+                  ? BRAND.electric
+                  : isDark
+                    ? `${BRAND.electric}28`
+                    : `${BRAND.lavender}66`,
+              },
+            ]}
+          >
+            <Ionicons
+              name={icon}
+              size={16}
+              color={selected ? BRAND.mist : BRAND.electric}
+            />
+          </View>
+          <Text style={[styles.rowLabel, { color: textColor }]} numberOfLines={1}>
+            {label}
+          </Text>
+          <Text style={[styles.rowMeta, { color: mutedColor }]} numberOfLines={1}>
+            {count}
+          </Text>
+          <Ionicons
+            name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={20}
+            color={selected ? BRAND.electric : mutedColor}
+          />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/**
+ * Collection row: [folder] name · count [check] [rename] [delete] — one horizontal line.
+ */
+function CollectionFilterRow({
+  name,
+  count,
+  selected,
+  isDark,
+  textColor,
+  mutedColor,
+  onSelect,
+  onRename,
+  onDelete,
+}: {
+  name: string;
+  count: number;
+  selected: boolean;
+  isDark: boolean;
+  textColor: string;
+  mutedColor: string;
+  onSelect: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View
+      style={[
         styles.row,
-        selected && styles.rowSelected,
         {
           backgroundColor: selected
             ? isDark
@@ -79,61 +169,66 @@ function FilterRow({
               ? `${BRAND.lavender}28`
               : `${BRAND.electric}18`,
         },
-        pressed && styles.pressed,
       ]}
     >
-      <View
-        style={[
-          styles.rowIcon,
-          {
-            backgroundColor: selected
-              ? BRAND.electric
-              : isDark
-                ? `${BRAND.electric}28`
-                : `${BRAND.lavender}66`,
-          },
-        ]}
+      <Pressable
+        onPress={onSelect}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        style={styles.collectionMain}
       >
-        <Ionicons
-          name={icon}
-          size={16}
-          color={selected ? BRAND.mist : BRAND.electric}
-        />
-      </View>
-      <Text style={[styles.rowLabel, { color: textColor }]} numberOfLines={1}>
-        {label}
-      </Text>
-      <View
-        style={[
-          styles.countBadge,
-          {
-            backgroundColor: selected
-              ? `${BRAND.mist}28`
-              : isDark
-                ? `${BRAND.mist}14`
-                : `${BRAND.electric}12`,
-          },
-        ]}
-      >
-        <Text
+        <View
           style={[
-            styles.countText,
+            styles.rowIcon,
             {
-              color: selected
-                ? BRAND.mist
+              backgroundColor: selected
+                ? BRAND.electric
                 : isDark
-                  ? `${BRAND.mist}CC`
-                  : textColor,
+                  ? `${BRAND.electric}28`
+                  : `${BRAND.lavender}66`,
             },
           ]}
         >
-          {count}
+          <Ionicons
+            name={selected ? 'folder' : 'folder-outline'}
+            size={16}
+            color={selected ? BRAND.mist : BRAND.electric}
+          />
+        </View>
+        <Text style={[styles.rowLabel, { color: textColor }]} numberOfLines={1}>
+          {name}
         </Text>
-      </View>
-      {selected ? (
-        <Ionicons name="checkmark-circle" size={18} color={BRAND.electric} />
-      ) : null}
-    </Pressable>
+        <Text style={[styles.rowMeta, { color: mutedColor }]} numberOfLines={1}>
+          {count} saved
+        </Text>
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={20}
+          color={selected ? BRAND.electric : mutedColor}
+        />
+      </Pressable>
+
+      <Pressable
+        onPress={onRename}
+        hitSlop={8}
+        accessibilityLabel={`Rename ${name}`}
+        style={styles.actionBtn}
+      >
+        <Ionicons name="pencil-outline" size={16} color={BRAND.electric} />
+      </Pressable>
+      <Pressable
+        onPress={onDelete}
+        hitSlop={8}
+        accessibilityLabel={`Delete ${name}`}
+        style={styles.actionBtn}
+      >
+        <Ionicons
+          name="trash-outline"
+          size={16}
+          color={isDark ? BRAND.pale : mutedColor}
+        />
+      </Pressable>
+    </View>
   );
 }
 
@@ -209,15 +304,24 @@ export function BookmarksFilterSheet({
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: isDark ? BRAND.deep : colors.card,
+              paddingBottom: Math.max(insets.bottom, 16) + 8,
+            },
+          ]}
+        >
+          <View
             style={[
-              styles.sheet,
+              styles.handle,
               {
-                backgroundColor: isDark ? BRAND.deep : colors.card,
-                paddingBottom: Math.max(insets.bottom, 16) + 8,
+                backgroundColor: isDark
+                  ? `${BRAND.mist}44`
+                  : `${BRAND.electric}33`,
               },
             ]}
-          >
-          <View style={[styles.handle, { backgroundColor: isDark ? `${BRAND.mist}44` : `${BRAND.electric}33` }]} />
+          />
           <View style={styles.sheetHeader}>
             <View>
               <Text style={[styles.sheetKicker, { color: palette.kicker }]}>
@@ -247,6 +351,7 @@ export function BookmarksFilterSheet({
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
           >
             <Text style={[styles.sectionLabel, { color: palette.tileSubtitle }]}>
               Topics
@@ -338,99 +443,80 @@ export function BookmarksFilterSheet({
                   active.collectionId === collection.id;
                 const isRenaming = renamingId === collection.id;
 
-                return (
-                  <View key={collection.id} style={styles.collectionBlock}>
-                    {isRenaming ? (
-                      <View
+                if (isRenaming) {
+                  return (
+                    <View
+                      key={collection.id}
+                      style={[
+                        styles.renameRow,
+                        {
+                          borderColor: isDark
+                            ? `${BRAND.lavender}28`
+                            : `${BRAND.electric}18`,
+                          backgroundColor: isDark
+                            ? `${BRAND.deepMuted}CC`
+                            : '#FFFFFF',
+                        },
+                      ]}
+                    >
+                      <TextInput
+                        value={renameDraft}
+                        onChangeText={setRenameDraft}
                         style={[
-                          styles.renameRow,
-                          {
-                            borderColor: isDark
-                              ? `${BRAND.lavender}28`
-                              : `${BRAND.electric}18`,
-                          },
+                          styles.input,
+                          { color: palette.tileTitle, flex: 1 },
                         ]}
+                        autoFocus
+                        maxLength={48}
+                        onSubmitEditing={() => void handleRename(collection)}
+                      />
+                      <Pressable
+                        onPress={() => void handleRename(collection)}
+                        hitSlop={8}
                       >
-                        <TextInput
-                          value={renameDraft}
-                          onChangeText={setRenameDraft}
-                          style={[styles.input, { color: palette.tileTitle, flex: 1 }]}
-                          autoFocus
-                          maxLength={48}
-                          onSubmitEditing={() => void handleRename(collection)}
-                        />
-                        <Pressable
-                          onPress={() => void handleRename(collection)}
-                          hitSlop={8}
+                        <Text style={styles.linkAction}>Save</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setRenamingId(null);
+                          setRenameDraft('');
+                        }}
+                        hitSlop={8}
+                      >
+                        <Text
+                          style={[
+                            styles.linkAction,
+                            { color: palette.tileSubtitle },
+                          ]}
                         >
-                          <Text style={styles.linkAction}>Save</Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            setRenamingId(null);
-                            setRenameDraft('');
-                          }}
-                          hitSlop={8}
-                        >
-                          <Text
-                            style={[
-                              styles.linkAction,
-                              { color: palette.tileSubtitle },
-                            ]}
-                          >
-                            Cancel
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ) : (
-                      <View style={styles.collectionRowWrap}>
-                        <View style={styles.collectionFilter}>
-                          <FilterRow
-                            icon="folder-outline"
-                            label={collection.name}
-                            count={collection.curioIds.length}
-                            selected={selected}
-                            onPress={() =>
-                              select({
-                                type: 'collection',
-                                collectionId: collection.id,
-                              })
-                            }
-                            isDark={isDark}
-                            textColor={palette.tileTitle}
-                            mutedColor={palette.tileSubtitle}
-                          />
-                        </View>
-                        <View style={styles.collectionActions}>
-                          <Pressable
-                            onPress={() => {
-                              setRenamingId(collection.id);
-                              setRenameDraft(collection.name);
-                            }}
-                            hitSlop={10}
-                            accessibilityLabel={`Rename ${collection.name}`}
-                          >
-                            <Ionicons
-                              name="pencil-outline"
-                              size={16}
-                              color={BRAND.electric}
-                            />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => void handleDelete(collection)}
-                            hitSlop={10}
-                            accessibilityLabel={`Delete ${collection.name}`}
-                          >
-                            <Ionicons
-                              name="trash-outline"
-                              size={16}
-                              color={isDark ? BRAND.pale : palette.tileSubtitle}
-                            />
-                          </Pressable>
-                        </View>
-                      </View>
-                    )}
-                  </View>
+                          Cancel
+                        </Text>
+                      </Pressable>
+                    </View>
+                  );
+                }
+
+                return (
+                  <CollectionFilterRow
+                    key={collection.id}
+                    name={collection.name}
+                    count={collection.curioIds.length}
+                    selected={selected}
+                    isDark={isDark}
+                    textColor={palette.tileTitle}
+                    mutedColor={palette.tileSubtitle}
+                    onSelect={() =>
+                      select({
+                        type: 'collection',
+                        collectionId: collection.id,
+                      })
+                    }
+                    onRename={() => {
+                      setRenamingId(collection.id);
+                      setRenameDraft(collection.name);
+                    }}
+                    onDelete={() => void handleDelete(collection)}
+                  />
                 );
               })
             )}
@@ -506,7 +592,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: `${BRAND.lavender}55`,
     marginBottom: 12,
   },
   sheetHeader: {
@@ -553,17 +638,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    flexWrap: 'nowrap',
+    width: '100%',
+    minHeight: 56,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
-  },
-  rowSelected: {
-    shadowColor: BRAND.electric,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
   },
   rowIcon: {
     width: 32,
@@ -571,23 +652,39 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
+    flexGrow: 0,
+    flexShrink: 0,
+    marginRight: 12,
   },
   rowLabel: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     fontSize: 15,
     fontWeight: '700',
+    marginRight: 8,
   },
-  countBadge: {
-    minWidth: 28,
-    paddingHorizontal: 8,
-    height: 24,
-    borderRadius: 12,
+  rowMeta: {
+    flexGrow: 0,
+    flexShrink: 0,
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  collectionMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    minWidth: 0,
+    marginRight: 4,
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  countText: {
-    fontSize: 12,
-    fontWeight: '800',
+    flexShrink: 0,
   },
   createBox: {
     flexDirection: 'row',
@@ -622,21 +719,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
   },
-  collectionBlock: {
-    gap: 6,
-  },
-  collectionRowWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  collectionFilter: {
-    flex: 1,
-  },
-  collectionActions: {
-    gap: 14,
-    paddingRight: 4,
-  },
   renameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -645,6 +727,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    minHeight: 56,
   },
   linkAction: {
     color: BRAND.electric,

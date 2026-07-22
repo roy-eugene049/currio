@@ -1,275 +1,569 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
-} from 'react-native-reanimated';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { ReminderTimeSheet } from '@/components/profile/ReminderTimeSheet';
 import type { ProfilePalette } from '@/hooks/useProfilePalette';
 import { useTheme } from '@/hooks/useTheme';
 import {
-  formatReminderHour,
-  formatReminderHoursLabel,
-  MAX_REMINDER_HOURS,
-  MIN_REMINDER_HOURS,
-  REMINDER_HOUR_OPTIONS,
+  formatNextNudgeLabel,
+  formatReminderTime,
+  formatReminderTimesLabel,
+  MAX_REMINDER_TIMES,
+  MIN_REMINDER_TIMES,
+  nextOccurrenceDate,
+  openExactAlarmSettings,
+  reminderTimeKey,
+  scheduleTestNudge,
+  type ReminderTime,
 } from '@/services/reminderService';
 import { BRAND } from '@/theme/brand';
 
 interface LearningRemindersTileProps {
   enabled: boolean;
-  hours: number[];
+  times: ReminderTime[];
   onToggle: (value: boolean) => void;
-  onChangeHours: (hours: number[]) => void;
+  onChangeTimes: (times: ReminderTime[]) => void;
   palette: ProfilePalette;
   delay?: number;
 }
 
-function PerkChip({
-  icon,
-  label,
-  palette,
+type PickerMode =
+  | { kind: 'add'; initial: ReminderTime }
+  | { kind: 'edit'; index: number; initial: ReminderTime }
+  | null;
+
+/**
+ * Horizontal row: [icon] time · period [chevron]
+ * Layout lives on an inner View (not Pressable) so Android / Expo Go apply flex correctly.
+ */
+function TimeListRow({
+  time,
+  period,
+  onPress,
   isDark,
+  textColor,
+  mutedColor,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  palette: ProfilePalette;
+  time: ReminderTime;
+  period: string;
+  onPress: () => void;
   isDark: boolean;
+  textColor: string;
+  mutedColor: string;
 }) {
   return (
-    <View
-      style={[
-        styles.perk,
-        {
-          backgroundColor: isDark ? `${BRAND.electric}18` : `${BRAND.electric}0A`,
-          borderColor: isDark ? `${BRAND.lavender}28` : `${BRAND.electric}16`,
-        },
-      ]}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Edit nudge at ${formatReminderTime(time)}`}
     >
-      <Ionicons name={icon} size={13} color={BRAND.electric} />
-      <Text style={[styles.perkLabel, { color: palette.tileTitle }]}>{label}</Text>
-    </View>
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.row,
+            {
+              backgroundColor: pressed
+                ? isDark
+                  ? `${BRAND.electric}44`
+                  : `${BRAND.electric}18`
+                : isDark
+                  ? `${BRAND.deepMuted}CC`
+                  : '#FFFFFF',
+              borderColor: isDark
+                ? `${BRAND.lavender}28`
+                : `${BRAND.electric}18`,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.rowIcon,
+              {
+                backgroundColor: isDark
+                  ? `${BRAND.electric}28`
+                  : `${BRAND.lavender}66`,
+              },
+            ]}
+          >
+            <Ionicons name="time-outline" size={16} color={BRAND.electric} />
+          </View>
+
+          <Text style={[styles.rowLabel, { color: textColor }]} numberOfLines={1}>
+            {formatReminderTime(time)}
+          </Text>
+
+          <Text style={[styles.rowMeta, { color: mutedColor }]} numberOfLines={1}>
+            {period}
+          </Text>
+
+          <Ionicons name="chevron-forward" size={18} color={mutedColor} />
+        </View>
+      )}
+    </Pressable>
   );
+}
+
+function periodForTime(time: ReminderTime): string {
+  const minutes = time.hour * 60 + time.minute;
+  if (minutes < 12 * 60) return 'Morning';
+  if (minutes < 17 * 60) return 'Afternoon';
+  if (minutes < 21 * 60) return 'Evening';
+  return 'Night';
+}
+
+function suggestedAddTime(existing: ReminderTime[]): ReminderTime {
+  const taken = new Set(existing.map(reminderTimeKey));
+  const candidates: ReminderTime[] = [
+    { hour: 9, minute: 0 },
+    { hour: 12, minute: 30 },
+    { hour: 15, minute: 0 },
+    { hour: 18, minute: 30 },
+    { hour: 21, minute: 0 },
+  ];
+  for (const candidate of candidates) {
+    if (!taken.has(reminderTimeKey(candidate))) return candidate;
+  }
+  const now = new Date();
+  let minute = Math.round(now.getMinutes() / 5) * 5;
+  let hour = now.getHours();
+  if (minute >= 60) {
+    minute = 0;
+    hour = (hour + 1) % 24;
+  }
+  return { hour, minute };
 }
 
 export function LearningRemindersTile({
   enabled,
-  hours,
+  times,
   onToggle,
-  onChangeHours,
+  onChangeTimes,
   palette,
   delay = 320,
 }: LearningRemindersTileProps) {
   const { isDark } = useTheme();
+  const [picker, setPicker] = useState<PickerMode>(null);
+  const [testing, setTesting] = useState(false);
+  const [testHint, setTestHint] = useState<string | null>(null);
 
-  const toggleHour = (hour: number) => {
-    const selected = hours.includes(hour);
-    if (selected) {
-      if (hours.length <= MIN_REMINDER_HOURS) return;
-      void Haptics.selectionAsync();
-      onChangeHours(hours.filter((h) => h !== hour));
+  const sortedTimes = useMemo(
+    () =>
+      [...times].sort(
+        (a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute),
+      ),
+    [times],
+  );
+
+  const nextNudgeLabel = useMemo(() => {
+    if (sortedTimes.length === 0) return null;
+    const upcoming = [...sortedTimes]
+      .map((time) => ({ time, at: nextOccurrenceDate(time).getTime() }))
+      .sort((a, b) => a.at - b.at)[0];
+    return upcoming ? formatNextNudgeLabel(upcoming.time) : null;
+  }, [sortedTimes]);
+
+  const canAdd = times.length < MAX_REMINDER_TIMES;
+  const canRemove = times.length > MIN_REMINDER_TIMES;
+
+  const openAddPicker = () => {
+    if (!canAdd) return;
+    void Haptics.selectionAsync();
+    setPicker({ kind: 'add', initial: suggestedAddTime(times) });
+  };
+
+  const openEditPicker = (index: number) => {
+    const time = sortedTimes[index];
+    if (!time) return;
+    void Haptics.selectionAsync();
+    setPicker({ kind: 'edit', index, initial: time });
+  };
+
+  const closePicker = () => setPicker(null);
+
+  const commitDraft = (nextTime: ReminderTime) => {
+    const key = reminderTimeKey(nextTime);
+
+    if (picker?.kind === 'add') {
+      if (!times.some((t) => reminderTimeKey(t) === key)) {
+        onChangeTimes([...times, nextTime]);
+      }
+      closePicker();
       return;
     }
-    if (hours.length >= MAX_REMINDER_HOURS) return;
+
+    if (picker?.kind === 'edit') {
+      const current = sortedTimes[picker.index];
+      if (!current) {
+        closePicker();
+        return;
+      }
+      const withoutCurrent = times.filter(
+        (t) => reminderTimeKey(t) !== reminderTimeKey(current),
+      );
+      if (!withoutCurrent.some((t) => reminderTimeKey(t) === key)) {
+        onChangeTimes([...withoutCurrent, nextTime]);
+      }
+      closePicker();
+    }
+  };
+
+  const removeEditingTime = () => {
+    if (picker?.kind !== 'edit' || !canRemove) return;
+    const current = sortedTimes[picker.index];
+    if (!current) return;
     void Haptics.selectionAsync();
-    onChangeHours([...hours, hour].sort((a, b) => a - b));
+    onChangeTimes(
+      times.filter((t) => reminderTimeKey(t) !== reminderTimeKey(current)),
+    );
+    closePicker();
+  };
+
+  const handleTestNudge = async () => {
+    if (testing) return;
+    setTesting(true);
+    setTestHint(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const ok = await scheduleTestNudge(8);
+      setTestHint(
+        ok
+          ? 'Test nudge in ~8 seconds — leave the app briefly to see it.'
+          : 'Notifications are blocked. Open Settings to allow them.',
+      );
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
-    <Animated.View
-      layout={LinearTransition.duration(220)}
-      entering={FadeIn.delay(delay).duration(360)}
-      style={styles.wrap}
-    >
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: palette.tileBg,
-            borderColor: enabled
-              ? isDark
-                ? `${BRAND.lavender}44`
-                : `${BRAND.electric}30`
-              : palette.tileBorder,
-          },
-        ]}
+    <>
+      <Animated.View
+        entering={FadeIn.delay(delay).duration(360)}
+        style={styles.wrap}
       >
-        <LinearGradient
-          colors={
-            enabled
-              ? [BRAND.deep, BRAND.electric, BRAND.pale]
-              : [BRAND.deepMuted, BRAND.electric]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.heroBand, !enabled && styles.heroBandPaused]}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: palette.tileBg,
+              borderColor: enabled
+                ? isDark
+                  ? `${BRAND.lavender}44`
+                  : `${BRAND.electric}30`
+                : palette.tileBorder,
+            },
+          ]}
         >
-          <View style={styles.heroOrb} />
-          <View style={styles.heroRow}>
-            <View style={styles.heroIconDisc}>
-              <Ionicons name="sparkles" size={22} color={BRAND.mist} />
+          <LinearGradient
+            colors={
+              enabled
+                ? [BRAND.deep, BRAND.electric, BRAND.pale]
+                : [BRAND.deepMuted, BRAND.electric]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.heroBand, !enabled && styles.heroBandPaused]}
+          >
+            <View style={styles.heroOrb} />
+            <View style={styles.heroRow}>
+              <View style={styles.heroIconDisc}>
+                <Ionicons name="notifications" size={22} color={BRAND.mist} />
+              </View>
+              <View style={styles.heroCopy}>
+                <Text style={styles.heroKicker}>HABIT</Text>
+                <Text style={styles.heroTitle}>Curiosity nudges</Text>
+                <Text style={styles.heroSubtitle}>
+                  Pick any times — we’ll gently pull you back for one fresh
+                  currio.
+                </Text>
+              </View>
+              <Switch
+                value={enabled}
+                onValueChange={(value) => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onToggle(value);
+                }}
+                trackColor={{
+                  false: `${BRAND.mist}55`,
+                  true: `${BRAND.mist}DD`,
+                }}
+                thumbColor={enabled ? BRAND.mist : `${BRAND.mist}EE`}
+                accessibilityLabel="Curiosity nudges"
+              />
             </View>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroKicker}>HABIT</Text>
-              <Text style={styles.heroTitle}>Curiosity nudges</Text>
-              <Text style={styles.heroSubtitle}>
-                Short prompts that pull you back to one fresh currio.
-              </Text>
-            </View>
-            <Switch
-              value={enabled}
-              onValueChange={(value) => {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onToggle(value);
-              }}
-              trackColor={{
-                false: `${BRAND.mist}55`,
-                true: `${BRAND.mist}DD`,
-              }}
-              thumbColor={enabled ? BRAND.mist : `${BRAND.mist}EE`}
-              accessibilityLabel="Curiosity nudges"
-            />
-          </View>
-        </LinearGradient>
+          </LinearGradient>
 
-        <View style={styles.body}>
-          <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusPill,
-                {
-                  backgroundColor: enabled
-                    ? isDark
-                      ? `${BRAND.electric}33`
-                      : `${BRAND.electric}14`
-                    : isDark
-                      ? `${BRAND.lavender}14`
-                      : `${BRAND.electric}08`,
-                },
-              ]}
-            >
+          <View style={styles.body}>
+            <View style={styles.statusRow}>
               <View
                 style={[
-                  styles.statusDot,
-                  { backgroundColor: enabled ? '#34D399' : palette.tileSubtitle },
+                  styles.statusPill,
+                  {
+                    backgroundColor: enabled
+                      ? isDark
+                        ? `${BRAND.electric}33`
+                        : `${BRAND.electric}14`
+                      : isDark
+                        ? `${BRAND.lavender}14`
+                        : `${BRAND.electric}08`,
+                  },
                 ]}
-              />
-              <Text style={[styles.statusText, { color: palette.tileTitle }]}>
-                {enabled ? 'Active' : 'Paused'}
-              </Text>
-            </View>
-            <Text style={[styles.scheduleHint, { color: palette.tileSubtitle }]}>
-              {enabled
-                ? formatReminderHoursLabel(hours)
-                : 'Turn on to set your rhythm'}
-            </Text>
-          </View>
-
-          <View style={styles.perkRow}>
-            <PerkChip
-              icon="flame-outline"
-              label="Streak watch"
-              palette={palette}
-              isDark={isDark}
-            />
-            <PerkChip
-              icon="snow-outline"
-              label="1 freeze / week"
-              palette={palette}
-              isDark={isDark}
-            />
-            <PerkChip
-              icon="time-outline"
-              label={`${MIN_REMINDER_HOURS}–${MAX_REMINDER_HOURS} times`}
-              palette={palette}
-              isDark={isDark}
-            />
-          </View>
-
-          {enabled ? (
-            <Animated.View
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(140)}
-              style={styles.scheduleBlock}
-            >
-              <Text style={[styles.scheduleTitle, { color: palette.tileTitle }]}>
-                Your day
-              </Text>
-              <Text style={[styles.scheduleCaption, { color: palette.tileSubtitle }]}>
-                Choose {MIN_REMINDER_HOURS}–{MAX_REMINDER_HOURS} moments. We’ll nudge at
-                8pm if today’s streak still needs a check-in.
-              </Text>
-
-              <View style={styles.timelineTrack}>
+              >
                 <View
                   style={[
-                    styles.timelineLine,
+                    styles.statusDot,
                     {
-                      backgroundColor: isDark
-                        ? `${BRAND.lavender}28`
-                        : `${BRAND.electric}18`,
+                      backgroundColor: enabled
+                        ? '#34D399'
+                        : palette.tileSubtitle,
                     },
                   ]}
                 />
-                <View style={styles.hourRow}>
-                  {REMINDER_HOUR_OPTIONS.map((hour) => {
-                    const selected = hours.includes(hour);
-                    const lockedOut =
-                      !selected && hours.length >= MAX_REMINDER_HOURS;
-                    return (
-                      <Pressable
-                        key={hour}
-                        onPress={() => toggleHour(hour)}
-                        disabled={lockedOut}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected, disabled: lockedOut }}
-                        style={({ pressed }) => [
-                          styles.hourNode,
-                          lockedOut && styles.hourNodeLocked,
-                          pressed && styles.hourNodePressed,
-                        ]}
-                      >
+                <Text style={[styles.statusText, { color: palette.tileTitle }]}>
+                  {enabled ? 'On' : 'Off'}
+                </Text>
+              </View>
+              <Text
+                style={[styles.scheduleHint, { color: palette.tileSubtitle }]}
+              >
+                {enabled
+                  ? formatReminderTimesLabel(sortedTimes)
+                  : 'Turn on to schedule nudges'}
+              </Text>
+            </View>
+
+            {enabled ? (
+              <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(140)}
+                style={styles.scheduleBlock}
+              >
+                <View
+                  style={[
+                    styles.timesCard,
+                    {
+                      backgroundColor: isDark
+                        ? `${BRAND.electric}12`
+                        : `${BRAND.electric}07`,
+                      borderColor: isDark
+                        ? `${BRAND.lavender}22`
+                        : `${BRAND.electric}14`,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.timesEyebrow,
+                      { color: palette.tileSubtitle },
+                    ]}
+                  >
+                    Your times · {sortedTimes.length}/{MAX_REMINDER_TIMES}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timesCaption,
+                      { color: palette.tileSubtitle },
+                    ]}
+                  >
+                    Daily nudges plus an 8:00 pm streak watch if you haven’t
+                    opened Currio yet.
+                  </Text>
+
+                  {nextNudgeLabel ? (
+                    <Text
+                      style={[styles.nextNudge, { color: BRAND.electric }]}
+                    >
+                      {nextNudgeLabel}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.timeList}>
+                    {sortedTimes.map((time, index) => (
+                      <TimeListRow
+                        key={reminderTimeKey(time)}
+                        time={time}
+                        period={periodForTime(time)}
+                        onPress={() => openEditPicker(index)}
+                        isDark={isDark}
+                        textColor={palette.tileTitle}
+                        mutedColor={palette.tileSubtitle}
+                      />
+                    ))}
+                  </View>
+
+                  {canAdd ? (
+                    <Pressable
+                      onPress={openAddPicker}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add nudge time"
+                    >
+                      {({ pressed }) => (
                         <View
                           style={[
-                            styles.hourDot,
-                            selected
-                              ? styles.hourDotSelected
-                              : {
-                                  backgroundColor: isDark
-                                    ? `${BRAND.deepMuted}`
-                                    : `${BRAND.mint}`,
-                                  borderColor: isDark
-                                    ? `${BRAND.lavender}44`
-                                    : `${BRAND.electric}28`,
-                                },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.hourLabel,
+                            styles.addRow,
                             {
-                              color: selected
-                                ? BRAND.electric
-                                : palette.tileSubtitle,
-                              fontWeight: selected ? '800' : '600',
+                              borderColor: isDark
+                                ? `${BRAND.lavender}40`
+                                : `${BRAND.electric}28`,
+                              backgroundColor: pressed
+                                ? isDark
+                                  ? `${BRAND.electric}28`
+                                  : `${BRAND.electric}12`
+                                : isDark
+                                  ? `${BRAND.lavender}10`
+                                  : '#FFFFFF',
+                              opacity: pressed ? 0.92 : 1,
                             },
                           ]}
                         >
-                          {formatReminderHour(hour)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                          <View
+                            style={[
+                              styles.rowIcon,
+                              {
+                                backgroundColor: isDark
+                                  ? `${BRAND.electric}33`
+                                  : `${BRAND.electric}14`,
+                              },
+                            ]}
+                          >
+                            <Ionicons
+                              name="add"
+                              size={18}
+                              color={BRAND.electric}
+                            />
+                          </View>
+                          <Text
+                            style={[
+                              styles.addRowLabel,
+                              { color: BRAND.electric },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            Add a time
+                          </Text>
+                        </View>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <Text
+                      style={[styles.limitHint, { color: palette.tileSubtitle }]}
+                    >
+                      Maximum of {MAX_REMINDER_TIMES} times set.
+                    </Text>
+                  )}
                 </View>
-              </View>
-            </Animated.View>
-          ) : null}
+
+                <View style={styles.footerActions}>
+                  <Pressable
+                    onPress={() => void handleTestNudge()}
+                    disabled={testing}
+                    accessibilityRole="button"
+                    accessibilityLabel="Send a test nudge"
+                  >
+                    {({ pressed }) => (
+                      <View
+                        style={[
+                          styles.testBtn,
+                          {
+                            backgroundColor: isDark
+                              ? `${BRAND.electric}22`
+                              : `${BRAND.electric}12`,
+                            opacity: pressed ? 0.88 : 1,
+                          },
+                        ]}
+                      >
+                        {testing ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={BRAND.electric}
+                          />
+                        ) : (
+                          <Ionicons
+                            name="flash-outline"
+                            size={15}
+                            color={BRAND.electric}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.testBtnLabel,
+                            { color: BRAND.electric },
+                          ]}
+                        >
+                          Send test nudge
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() =>
+                      void (Platform.OS === 'android'
+                        ? openExactAlarmSettings()
+                        : Linking.openSettings())
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      Platform.OS === 'android'
+                        ? 'Allow exact alarms for nudges'
+                        : 'Open notification settings'
+                    }
+                  >
+                    {({ pressed }) => (
+                      <Text
+                        style={[
+                          styles.settingsLinkLabel,
+                          {
+                            color: palette.tileSubtitle,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                      >
+                        {Platform.OS === 'android'
+                          ? 'Allow exact alarms'
+                          : 'Notification settings'}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+
+                {testHint ? (
+                  <Text
+                    style={[styles.testHint, { color: palette.tileSubtitle }]}
+                  >
+                    {testHint}
+                  </Text>
+                ) : null}
+              </Animated.View>
+            ) : null}
+          </View>
         </View>
-      </View>
-    </Animated.View>
+      </Animated.View>
+
+      <ReminderTimeSheet
+        visible={picker != null}
+        mode={picker?.kind === 'edit' ? 'edit' : 'add'}
+        initialTime={picker?.initial ?? { hour: 9, minute: 0 }}
+        canRemove={canRemove}
+        onClose={closePicker}
+        onSave={commitDraft}
+        onRemove={removeEditingTime}
+      />
+    </>
   );
 }
 
@@ -372,81 +666,126 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flexShrink: 1,
   },
-  perkRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  perk: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  perkLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
   scheduleBlock: {
     marginTop: 2,
-    gap: 8,
+    gap: 12,
   },
-  scheduleTitle: {
-    fontSize: 14,
+  timesCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 12,
+    gap: 10,
+  },
+  timesEyebrow: {
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: -0.2,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
-  scheduleCaption: {
+  timesCaption: {
     fontSize: 12,
     lineHeight: 17,
+    marginTop: -4,
   },
-  timelineTrack: {
-    marginTop: 6,
-    paddingTop: 8,
+  nextNudge: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: -0.1,
   },
-  timelineLine: {
-    position: 'absolute',
-    left: 10,
-    right: 10,
-    top: 18,
-    height: 2,
-    borderRadius: 1,
-  },
-  hourRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  hourNode: {
-    alignItems: 'center',
+  timeList: {
     gap: 8,
-    minWidth: 34,
+    width: '100%',
   },
-  hourNodeLocked: {
-    opacity: 0.35,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    width: '100%',
+    minHeight: 56,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  hourNodePressed: {
-    opacity: 0.85,
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    flexGrow: 0,
+    flexShrink: 0,
   },
-  hourDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
+  rowLabel: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    fontSize: 15,
+    fontWeight: '700',
+    marginRight: 8,
   },
-  hourDotSelected: {
-    backgroundColor: BRAND.electric,
-    borderColor: BRAND.lavender,
-    shadowColor: BRAND.electric,
-    shadowOpacity: 0.45,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 3,
+  rowMeta: {
+    flexGrow: 0,
+    flexShrink: 0,
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 8,
   },
-  hourLabel: {
-    fontSize: 11,
-    letterSpacing: 0.1,
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    width: '100%',
+    minHeight: 52,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  addRowLabel: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  limitHint: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  testBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  testBtnLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  settingsLinkLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  testHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
   },
 });

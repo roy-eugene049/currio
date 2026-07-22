@@ -28,6 +28,11 @@ import { useProfilePalette } from '@/hooks/useProfilePalette';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import type { ReminderTime } from '@/services/reminderService';
+import {
+  formatNextNudgeLabel,
+  nextOccurrenceDate,
+} from '@/services/reminderService';
 import { BRAND } from '@/theme/brand';
 import type { Category, ThemeMode } from '@/types/curio';
 import { showActionFeedback } from '@/utils/actionFeedback';
@@ -101,13 +106,13 @@ export default function ProfileScreen() {
   const interests = useAppStore((s) => s.interests);
   const themeMode = useAppStore((s) => s.themeMode);
   const learningRemindersEnabled = useAppStore((s) => s.learningRemindersEnabled);
-  const learningReminderHours = useAppStore((s) => s.learningReminderHours);
+  const learningReminderTimes = useAppStore((s) => s.learningReminderTimes);
   const weeklyDigestEnabled = useAppStore((s) => s.weeklyDigestEnabled);
   const bookmarks = useAppStore((s) => s.bookmarks);
   const streak = useAppStore((s) => s.streak);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const setLearningRemindersEnabled = useAppStore((s) => s.setLearningRemindersEnabled);
-  const setLearningReminderHours = useAppStore((s) => s.setLearningReminderHours);
+  const setLearningReminderTimes = useAppStore((s) => s.setLearningReminderTimes);
   const setWeeklyDigestEnabled = useAppStore((s) => s.setWeeklyDigestEnabled);
   const updateInterests = useAppStore((s) => s.updateInterests);
   const user = useAuthStore((s) => s.user);
@@ -162,8 +167,26 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleReminderHoursChange = async (hours: number[]) => {
-    await setLearningReminderHours(hours);
+  const handleReminderTimesChange = async (times: ReminderTime[]) => {
+    const ok = await setLearningReminderTimes(times);
+    if (!ok) {
+      showActionFeedback(
+        'error',
+        'Couldn’t schedule that time. Check notification permissions and try again.',
+      );
+      return;
+    }
+
+    const upcoming = [...times]
+      .map((time) => ({ time, at: nextOccurrenceDate(time).getTime() }))
+      .sort((a, b) => a.at - b.at)[0];
+
+    showActionFeedback(
+      'success',
+      upcoming
+        ? formatNextNudgeLabel(upcoming.time)
+        : 'Curiosity nudge times updated',
+    );
   };
 
   const handleDigestToggle = async (enabled: boolean) => {
@@ -300,9 +323,9 @@ export default function ProfileScreen() {
           </Text>
           <LearningRemindersTile
             enabled={learningRemindersEnabled}
-            hours={learningReminderHours}
+            times={learningReminderTimes}
             onToggle={handleRemindersToggle}
-            onChangeHours={handleReminderHoursChange}
+            onChangeTimes={handleReminderTimesChange}
             palette={palette}
             delay={300}
           />
