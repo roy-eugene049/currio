@@ -1,50 +1,95 @@
-# Welcome to your Expo app 👋
+# Currio
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Learn something new every day.**
 
-## Get started
+Currio is a curiosity micro-learning app — bite-sized curios, streaks that stay gentle, topics you choose, and tools that help facts stick. Built with Expo (SDK 54) and Supabase.
 
-1. Install dependencies
+**Current version:** [1.2.0](./docs/RELEASE_NOTES.md) · [Release notes](./docs/RELEASE_NOTES.md)
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## What’s in the app
 
-   ```bash
-   npx expo start
-   ```
+| Area | Highlights |
+|------|------------|
+| Daily curios | Reader, shuffle, interest-based feed (local + remote) |
+| Habit | Streaks, curiosity nudges, streak-at-risk, soft freeze |
+| Library | Bookmarks, named **collections**, topic filters |
+| Quiz | Optional **curiosity quiz** every few curios — one correct answer, skip anytime |
+| Share & email | Branded share cards, welcome email, weekly digest |
+| Account | Auth + cloud sync via Supabase |
 
-In the output, you'll find options to open the app in a
+Full changelog by version: **[docs/RELEASE_NOTES.md](./docs/RELEASE_NOTES.md)**
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Stack
 
-## Get a fresh project
+- **App** — Expo Router, React Native, NativeWind, Zustand, React Query
+- **Backend** — Supabase (Auth, Postgres, Edge Functions, RLS)
+- **Email** — Resend (welcome + weekly digest)
+- **Delivery** — EAS Build
 
-When you're ready, run:
+---
+
+## Quick start
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Open with a [development build](https://docs.expo.dev/develop/development-builds/introduction/), simulator/emulator, or Expo Go where compatible.
 
-## Learn more
+### Environment
 
-To learn more about developing your project with Expo, look at the following resources:
+Copy your Supabase and related keys into `.env` (see [docs/BACKEND.md](./docs/BACKEND.md)). Restart Metro after changes:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start -c
+```
 
-## Join the community
+### Useful scripts
 
-Join our community of developers creating universal apps.
+| Script | Purpose |
+|--------|---------|
+| `npm run lint` | ESLint |
+| `npm run curios:seed` | Seed the `curios` catalog into Supabase |
+| `npm run brand:assets` | Regenerate icon / splash from brand sources |
+| `npm run supabase:deploy:functions` | Deploy Edge Functions |
+| `npm run build:apk` | EAS preview APK |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [**Release notes**](./docs/RELEASE_NOTES.md) | Shipped features by app version |
+| [Feature roadmap](./docs/FEATURE_ROADMAP.md) | Phased product plan |
+| [Backend](./docs/BACKEND.md) | Supabase auth, schema, sync |
+| [AI engine](./docs/AI_ENGINE.md) | Curio generation & feed architecture |
+| [Implementation guide](./docs/IMPLEMENTATION_GUIDE.md) | AI + Pexels setup walkthrough |
+| [Welcome email](./docs/WELCOME_EMAIL.md) | Resend welcome flow |
+| [Weekly digest](./docs/WEEKLY_DIGEST.md) | Sunday digest setup |
+
+Expo SDK reference for this project: [docs.expo.dev/versions/v54.0.0](https://docs.expo.dev/versions/v54.0.0/)
+
+---
+
+## Project layout
+
+```text
+src/app/           Expo Router screens
+src/components/    UI (reader, bookmarks, challenge, profile, …)
+src/services/      Sync, curios, challenges, notifications
+src/store/         Zustand app + auth state
+docs/              Product & engineering docs
+supabase/          Migrations + Edge Functions
+```
+
+---
+
+## License
+
+Private — all rights reserved unless otherwise noted.

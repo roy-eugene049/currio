@@ -2,7 +2,7 @@
   "expo": {
     "name": "currio",
     "slug": "currio",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "currio",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.twiicetech.currio",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#31006E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

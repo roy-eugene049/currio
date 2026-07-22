@@ -56,6 +56,7 @@ interface AppStore extends AppState {
   setLearningRemindersEnabled: (enabled: boolean) => Promise<boolean>;
   setLearningReminderHours: (hours: number[]) => Promise<boolean>;
   setWeeklyDigestEnabled: (enabled: boolean) => Promise<void>;
+  applyChallengeStreakBonus: () => Promise<boolean>;
   updateInterests: (interests: Category[]) => Promise<void>;
   recordDailyOpen: () => Promise<void>;
   rescheduleReminders: () => Promise<void>;
@@ -344,6 +345,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const next = { ...get(), weeklyDigestEnabled: enabled };
     set(next);
     await persistState(next);
+  },
+
+  applyChallengeStreakBonus: async () => {
+    const today = getTodayDateString();
+    const already = await getSecureItem(STORAGE_KEYS.CHALLENGE_BONUS_DATE);
+    if (already === today) return false;
+
+    const state = get();
+    const next = { ...state, streak: Math.max(1, state.streak + 1) };
+    set(next);
+    await persistState(next);
+    await setSecureItem(STORAGE_KEYS.CHALLENGE_BONUS_DATE, today);
+    return true;
   },
 
   setLearningRemindersEnabled: async (enabled) => {

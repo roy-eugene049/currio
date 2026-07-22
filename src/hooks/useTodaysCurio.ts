@@ -3,6 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  getIntervalCurios,
+  recordSessionCurio,
+  shouldOfferChallengeOnNext,
+} from '@/services/challengeService';
+import {
   fetchDailyCurio,
   fetchNextCurio,
   isRemoteCuriosEnabled,
@@ -17,7 +22,9 @@ import {
 import { getCurioById, pickRandomCurio } from '@/services/curioService';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useChallengeSheetStore } from '@/store/useChallengeSheetStore';
 import type { Category, Curio } from '@/types/curio';
+import { buildChallengeQuizFromSession } from '@/utils/challengeQuiz';
 
 type ResolvedNext = {
   curio: Curio;
@@ -63,6 +70,19 @@ export function useTodaysCurio() {
     [],
   );
 
+  const offerChallengeAfterReading = useCallback(async (sessionSnapshot: Curio[]) => {
+    const offer = await shouldOfferChallengeOnNext();
+    if (!offer) return;
+
+    const quiz = buildChallengeQuizFromSession(sessionSnapshot);
+    if (!quiz) return;
+
+    // User already finished the prior curios (they tapped next).
+    setTimeout(() => {
+      useChallengeSheetStore.getState().openChallenge(quiz);
+    }, 900);
+  }, []);
+
   const query = useQuery({
     queryKey,
     queryFn: async () => {
@@ -92,6 +112,16 @@ export function useTodaysCurio() {
     if (!query.data) return;
     warmPrefetch(query.data);
   }, [query.data?.id, query.data?.category, warmPrefetch]);
+
+  const countedDailyIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!query.data) return;
+    if (countedDailyIdRef.current === query.data.id) return;
+    countedDailyIdRef.current = query.data.id;
+    // Track only — never open the sheet here so they can finish reading.
+    recordSessionCurio(query.data);
+  }, [query.data]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,6 +203,9 @@ export function useTodaysCurio() {
     const current = queryClient.getQueryData<Curio>(queryKey);
     if (!current) throw new Error('No current curio');
 
+    // Snapshot the interval window before advancing — only curios already read.
+    const sessionSnapshot = getIntervalCurios();
+
     advancingRef.current = true;
     setIsAdvancing(true);
 
@@ -203,6 +236,9 @@ export function useTodaysCurio() {
       warmPrefetch(resolved.curio);
       void persistCurioAdvance(resolved, current.id);
 
+      // After ≥3 read curios, offer on shuffle — never on first open of the 3rd.
+      void offerChallengeAfterReading(sessionSnapshot);
+
       return resolved.curio;
     } finally {
       advancingRef.current = false;
@@ -210,6 +246,7 @@ export function useTodaysCurio() {
     }
   }, [
     fetchSlowNext,
+    offerChallengeAfterReading,
     persistCurioAdvance,
     queryClient,
     queryKey,

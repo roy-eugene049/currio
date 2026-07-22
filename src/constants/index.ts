@@ -53,7 +53,7 @@ export const COLORS = {
   borderDark: '#334155',
 } as const;
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 
 export const STORAGE_KEYS = {
   APP_STATE: 'currio_app_state',
@@ -62,4 +62,6 @@ export const STORAGE_KEYS = {
   LEARNING_REMINDERS_ENABLED: 'currio_learning_reminders_enabled',
   LEARNING_REMINDER_HOURS: 'currio_learning_reminder_hours',
   STREAK_FREEZE_WEEK: 'currio_streak_freeze_week',
+  CHALLENGE_STATE: 'currio_challenge_state',
+  CHALLENGE_BONUS_DATE: 'currio_challenge_bonus_date',
 } as const;
