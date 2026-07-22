@@ -34,6 +34,8 @@ drop table if exists public.user_curio_queue cascade;
 drop table if exists public.user_seen_curios cascade;
 drop table if exists public.welcome_email_queue cascade;
 drop table if exists public.weekly_digest_queue cascade;
+drop table if exists public.collection_items cascade;
+drop table if exists public.collections cascade;
 drop table if exists public.bookmarks cascade;
 drop table if exists public.user_interests cascade;
 drop table if exists public.user_app_state cascade;
@@ -187,6 +189,49 @@ create policy "Bookmarks: users manage own rows"
   with check (auth.uid() = user_id);
 
 create index idx_bookmarks_user_id on public.bookmarks (user_id);
+
+-- ── 6b. Collections ─────────────────────────────────────────────────────────
+
+create table public.collections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  name text not null check (char_length(trim(name)) between 1 and 48),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index idx_collections_user_id on public.collections (user_id);
+
+alter table public.collections enable row level security;
+
+create policy "Collections: users manage own rows"
+  on public.collections for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create table public.collection_items (
+  collection_id uuid references public.collections on delete cascade not null,
+  curio_id text not null references public.curios (id) on delete cascade,
+  added_at timestamptz not null default now(),
+  primary key (collection_id, curio_id)
+);
+
+alter table public.collection_items enable row level security;
+
+create policy "Collection items: users manage own rows"
+  on public.collection_items for all
+  using (
+    exists (
+      select 1 from public.collections c
+      where c.id = collection_id and c.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.collections c
+      where c.id = collection_id and c.user_id = auth.uid()
+    )
+  );
 
 -- ── 7. Seen curios (rotation / no-repeat) ─────────────────────────────────────
 
@@ -402,5 +447,7 @@ grant select, insert, update, delete on public.user_seen_curios to authenticated
 grant select, insert, update, delete on public.user_curio_queue to authenticated;
 grant select on public.curio_generations to authenticated;
 grant select, insert, update, delete on public.curio_feedback to authenticated;
+grant select, insert, update, delete on public.collections to authenticated;
+grant select, insert, update, delete on public.collection_items to authenticated;
 
 grant all on all tables in schema public to service_role;

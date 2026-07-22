@@ -28,11 +28,19 @@ export interface Curio {
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+export interface CurioCollection {
+  id: string;
+  name: string;
+  curioIds: string[];
+  updatedAt: string;
+}
+
 export interface AppState {
   hasCompletedOnboarding: boolean;
   hasSeenWelcome: boolean;
   interests: Category[];
   bookmarks: string[];
+  collections: CurioCollection[];
   seenCurioIds: string[];
   streak: number;
   lastOpenDate: string | null;

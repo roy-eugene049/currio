@@ -9,7 +9,13 @@ import {
   syncLearningReminders,
 } from '@/services/reminderService';
 import { getSecureItem, setSecureItem } from '@/services/storage';
-import type { AppState, Category, ThemeMode } from '@/types/curio';
+import type { AppState, Category, CurioCollection, ThemeMode } from '@/types/curio';
+import {
+  createCollectionId,
+  normalizeCollectionName,
+  stripCurioFromCollections,
+  toggleCurioInCollection,
+} from '@/utils/collections';
 import {
   getTodayDateString,
   getWeekKey,
@@ -22,6 +28,7 @@ const initialState: AppState = {
   hasSeenWelcome: false,
   interests: [],
   bookmarks: [],
+  collections: [],
   seenCurioIds: [],
   streak: 0,
   lastOpenDate: null,
@@ -41,6 +48,10 @@ interface AppStore extends AppState {
   completeWelcome: () => Promise<void>;
   toggleBookmark: (curioId: string) => Promise<void>;
   isBookmarked: (curioId: string) => boolean;
+  createCollection: (name: string) => Promise<CurioCollection | null>;
+  renameCollection: (collectionId: string, name: string) => Promise<boolean>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  toggleCurioCollection: (collectionId: string, curioId: string) => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setLearningRemindersEnabled: (enabled: boolean) => Promise<boolean>;
   setLearningReminderHours: (hours: number[]) => Promise<boolean>;
@@ -151,6 +162,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           ...parsed,
           hasSeenWelcome: parsed.hasSeenWelcome ?? false,
           weeklyDigestEnabled: parsed.weeklyDigestEnabled ?? true,
+          collections: Array.isArray(parsed.collections) ? parsed.collections : [],
           learningRemindersEnabled,
           learningReminderHours,
           streakFreezeWeekKey,
@@ -246,15 +258,81 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   toggleBookmark: async (curioId) => {
     const state = get();
-    const bookmarks = state.bookmarks.includes(curioId)
+    const removing = state.bookmarks.includes(curioId);
+    const bookmarks = removing
       ? state.bookmarks.filter((id) => id !== curioId)
       : [...state.bookmarks, curioId];
-    const next = { ...state, bookmarks };
+    const collections = removing
+      ? stripCurioFromCollections(state.collections, curioId)
+      : state.collections;
+    const next = { ...state, bookmarks, collections };
     set(next);
     await persistState(next);
   },
 
   isBookmarked: (curioId) => get().bookmarks.includes(curioId),
+
+  createCollection: async (name) => {
+    const normalized = normalizeCollectionName(name);
+    if (!normalized) return null;
+
+    const collection: CurioCollection = {
+      id: createCollectionId(),
+      name: normalized,
+      curioIds: [],
+      updatedAt: new Date().toISOString(),
+    };
+    const state = get();
+    const next = {
+      ...state,
+      collections: [collection, ...state.collections],
+    };
+    set(next);
+    await persistState(next);
+    return collection;
+  },
+
+  renameCollection: async (collectionId, name) => {
+    const normalized = normalizeCollectionName(name);
+    if (!normalized) return false;
+
+    const state = get();
+    const collections = state.collections.map((collection) =>
+      collection.id === collectionId
+        ? { ...collection, name: normalized, updatedAt: new Date().toISOString() }
+        : collection,
+    );
+    const next = { ...state, collections };
+    set(next);
+    await persistState(next);
+    return true;
+  },
+
+  deleteCollection: async (collectionId) => {
+    const state = get();
+    const next = {
+      ...state,
+      collections: state.collections.filter((c) => c.id !== collectionId),
+    };
+    set(next);
+    await persistState(next);
+  },
+
+  toggleCurioCollection: async (collectionId, curioId) => {
+    const state = get();
+    let bookmarks = state.bookmarks;
+    if (!bookmarks.includes(curioId)) {
+      bookmarks = [...bookmarks, curioId];
+    }
+    const collections = toggleCurioInCollection(
+      state.collections,
+      collectionId,
+      curioId,
+    );
+    const next = { ...state, bookmarks, collections };
+    set(next);
+    await persistState(next);
+  },
 
   setThemeMode: async (mode) => {
     const next = { ...get(), themeMode: mode };

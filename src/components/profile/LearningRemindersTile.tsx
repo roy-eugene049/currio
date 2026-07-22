@@ -100,12 +100,12 @@ export function LearningRemindersTile({
         <LinearGradient
           colors={
             enabled
-              ? [BRAND.electric, BRAND.pale, BRAND.lavender]
-              : palette.tileAccent
+              ? [BRAND.deep, BRAND.electric, BRAND.pale]
+              : [BRAND.deepMuted, BRAND.electric]
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.heroBand}
+          style={[styles.heroBand, !enabled && styles.heroBandPaused]}
         >
           <View style={styles.heroOrb} />
           <View style={styles.heroRow}>
@@ -126,10 +126,10 @@ export function LearningRemindersTile({
                 onToggle(value);
               }}
               trackColor={{
-                false: `${BRAND.mist}44`,
-                true: `${BRAND.mist}CC`,
+                false: `${BRAND.mist}55`,
+                true: `${BRAND.mist}DD`,
               }}
-              thumbColor={enabled ? BRAND.electric : BRAND.mist}
+              thumbColor={enabled ? BRAND.mist : `${BRAND.mist}EE`}
               accessibilityLabel="Curiosity nudges"
             />
           </View>
@@ -289,12 +289,15 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
+  heroBandPaused: {
+    opacity: 0.92,
+  },
   heroOrb: {
     position: 'absolute',
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: `${BRAND.mist}22`,
+    backgroundColor: `${BRAND.mist}18`,
     top: -36,
     right: -20,
   },
@@ -311,7 +314,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: `${BRAND.mist}28`,
     borderWidth: 1,
-    borderColor: `${BRAND.mist}33`,
+    borderColor: `${BRAND.mist}40`,
   },
   heroCopy: {
     flex: 1,
@@ -332,8 +335,8 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     marginTop: 3,
     fontSize: 12,
-    lineHeight: 16,
-    color: `${BRAND.mist}DD`,
+    lineHeight: 17,
+    color: `${BRAND.mist}E6`,
   },
   body: {
     paddingHorizontal: 16,

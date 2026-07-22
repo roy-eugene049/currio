@@ -12,7 +12,8 @@ export const LIGHT = {
   borderStrong: `${BRAND.electric}30`,
   text: BRAND.deep,
   textSecondary: '#5A2088',
-  textMuted: '#9478B5',
+  /** Slightly deeper for labels on lilac chips / muted surfaces */
+  textMuted: '#7A5A9E',
   input: '#FFF8FF',
   inputBorder: `${BRAND.lavender}CC`,
   chip: '#EDE0FF',

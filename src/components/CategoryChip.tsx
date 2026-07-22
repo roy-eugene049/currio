@@ -74,11 +74,11 @@ export function CategoryChip({
       <Ionicons
         name={CATEGORY_ICONS[category] as keyof typeof Ionicons.glyphMap}
         size={size === 'sm' ? 14 : 16}
-        color={selected ? '#FFFFFF' : colors.textMuted}
+        color={selected ? BRAND.mist : colors.textMuted}
       />
       <Text
         className={`${textSize} font-medium`}
-        style={{ color: selected ? '#FFFFFF' : colors.text }}
+        style={{ color: selected ? BRAND.mist : colors.text }}
       >
         {category}
       </Text>

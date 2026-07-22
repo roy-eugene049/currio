@@ -20,7 +20,8 @@ export const NEUMO = {
     shadowLight: `${BRAND.electric}22`,
     accent: BRAND.electric,
     text: BRAND.mist,
-    textMuted: BRAND.lavender,
+    /** Cream-based muted — readable on deep/deepMuted (avoid lavender-on-purple). */
+    textMuted: `${BRAND.mist}AA`,
   },
 } as const;
 

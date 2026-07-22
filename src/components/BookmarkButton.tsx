@@ -9,6 +9,7 @@ import Animated, {
 
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
+import { useCollectionSheetStore } from '@/store/useCollectionSheetStore';
 import { showActionFeedback } from '@/utils/actionFeedback';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -27,6 +28,7 @@ export function BookmarkButton({
   const { colors } = useTheme();
   const bookmarked = useAppStore((s) => s.isBookmarked(curioId));
   const toggleBookmark = useAppStore((s) => s.toggleBookmark);
+  const openSaveSheet = useCollectionSheetStore((s) => s.openSaveSheet);
   const scale = useSharedValue(1);
   const rotate = useSharedValue(0);
 
@@ -49,8 +51,15 @@ export function BookmarkButton({
       withSpring(0, { damping: 12, stiffness: 220 }),
     );
 
-    void toggleBookmark(curioId);
-    showActionFeedback(wasBookmarked ? 'bookmark-removed' : 'bookmark');
+    void (async () => {
+      await toggleBookmark(curioId);
+      if (wasBookmarked) {
+        showActionFeedback('bookmark-removed');
+        return;
+      }
+      showActionFeedback('bookmark');
+      openSaveSheet(curioId);
+    })();
   };
 
   return (

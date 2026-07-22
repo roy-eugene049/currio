@@ -48,13 +48,11 @@ export function WeeklyDigestTile({
           colors={
             enabled
               ? [BRAND.deep, BRAND.electric, BRAND.pale]
-              : isDark
-                ? [`${BRAND.deepMuted}`, `${BRAND.electric}88`]
-                : [`${BRAND.pale}`, `${BRAND.lavender}`]
+              : [BRAND.deepMuted, BRAND.electric]
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.heroBand}
+          style={[styles.heroBand, !enabled && styles.heroBandPaused]}
         >
           <View style={styles.stamp}>
             <Text style={styles.stampText}>SUN</Text>
@@ -77,10 +75,10 @@ export function WeeklyDigestTile({
                 onToggle(value);
               }}
               trackColor={{
-                false: `${BRAND.mist}44`,
-                true: `${BRAND.mist}CC`,
+                false: `${BRAND.mist}55`,
+                true: `${BRAND.mist}DD`,
               }}
-              thumbColor={enabled ? BRAND.electric : BRAND.mist}
+              thumbColor={enabled ? BRAND.mist : `${BRAND.mist}EE`}
               accessibilityLabel="Weekly digest email"
             />
           </View>
@@ -190,6 +188,9 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
+  heroBandPaused: {
+    opacity: 0.92,
+  },
   stamp: {
     position: 'absolute',
     top: 12,
@@ -198,11 +199,11 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 1.5,
-    borderColor: `${BRAND.mist}55`,
+    borderColor: `${BRAND.mist}66`,
     alignItems: 'center',
     justifyContent: 'center',
     transform: [{ rotate: '12deg' }],
-    backgroundColor: `${BRAND.mist}14`,
+    backgroundColor: `${BRAND.mist}22`,
   },
   stampText: {
     fontSize: 10,
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: `${BRAND.mist}28`,
     borderWidth: 1,
-    borderColor: `${BRAND.mist}33`,
+    borderColor: `${BRAND.mist}40`,
   },
   heroCopy: {
     flex: 1,
@@ -245,8 +246,8 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     marginTop: 3,
     fontSize: 12,
-    lineHeight: 16,
-    color: `${BRAND.mist}DD`,
+    lineHeight: 17,
+    color: `${BRAND.mist}E6`,
   },
   body: {
     paddingHorizontal: 16,

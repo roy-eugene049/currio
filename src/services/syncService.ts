@@ -4,7 +4,8 @@ import { getSecureItem, setSecureItem } from '@/services/storage';
 import { getSupabase } from '@/services/supabase';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { AppState, Category, ThemeMode } from '@/types/curio';
+import type { AppState, Category, CurioCollection, ThemeMode } from '@/types/curio';
+import { sortCollections } from '@/utils/collections';
 
 type RemoteAppStateRow = {
   user_id: string;
@@ -73,12 +74,14 @@ function remoteToAppState(
   interests: Category[],
   bookmarks: string[],
   seenCurioIds: string[],
+  collections: CurioCollection[],
 ): AppState {
   return {
     hasCompletedOnboarding: row.has_completed_onboarding,
     hasSeenWelcome: row.has_seen_welcome,
     interests,
     bookmarks,
+    collections,
     seenCurioIds,
     streak: row.streak,
     lastOpenDate: row.last_open_date,
@@ -92,29 +95,48 @@ function remoteToAppState(
 async function pullRemote(userId: string) {
   const supabase = getSupabase();
 
-  const [appStateRes, interestsRes, bookmarksRes, seenRes] = await Promise.all([
-    supabase
-      .from('user_app_state')
-      .select(
-        'user_id, has_completed_onboarding, has_seen_welcome, streak, last_open_date, theme_mode, todays_curio_id, todays_curio_date, weekly_digest_enabled, updated_at',
-      )
-      .eq('user_id', userId)
-      .maybeSingle(),
-    supabase.from('user_interests').select('category').eq('user_id', userId),
-    supabase.from('bookmarks').select('curio_id').eq('user_id', userId),
-    supabase.from('user_seen_curios').select('curio_id').eq('user_id', userId),
-  ]);
+  const [appStateRes, interestsRes, bookmarksRes, seenRes, collectionsRes] =
+    await Promise.all([
+      supabase
+        .from('user_app_state')
+        .select(
+          'user_id, has_completed_onboarding, has_seen_welcome, streak, last_open_date, theme_mode, todays_curio_id, todays_curio_date, weekly_digest_enabled, updated_at',
+        )
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase.from('user_interests').select('category').eq('user_id', userId),
+      supabase.from('bookmarks').select('curio_id').eq('user_id', userId),
+      supabase.from('user_seen_curios').select('curio_id').eq('user_id', userId),
+      supabase
+        .from('collections')
+        .select('id, name, updated_at, collection_items(curio_id)')
+        .eq('user_id', userId),
+    ]);
 
   if (appStateRes.error) throw appStateRes.error;
   if (interestsRes.error) throw interestsRes.error;
   if (bookmarksRes.error) throw bookmarksRes.error;
   if (seenRes.error) throw seenRes.error;
+  if (collectionsRes.error) throw collectionsRes.error;
+
+  const collections: CurioCollection[] = sortCollections(
+    (collectionsRes.data ?? []).map((row) => {
+      const items = (row.collection_items ?? []) as { curio_id: string }[];
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        updatedAt: (row.updated_at as string) ?? new Date().toISOString(),
+        curioIds: items.map((item) => item.curio_id),
+      };
+    }),
+  );
 
   return {
     appState: appStateRes.data,
     interests: (interestsRes.data ?? []).map((row) => row.category as Category),
     bookmarks: (bookmarksRes.data ?? []).map((row) => row.curio_id),
     seenCurioIds: (seenRes.data ?? []).map((row) => row.curio_id),
+    collections,
   };
 }
 
@@ -198,6 +220,81 @@ async function pushSeenCurios(userId: string, seenCurioIds: string[]): Promise<v
   if (error) throw error;
 }
 
+async function pushCollections(
+  userId: string,
+  collections: CurioCollection[],
+): Promise<void> {
+  const supabase = getSupabase();
+  const { data: remote, error: readError } = await supabase
+    .from('collections')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (readError) throw readError;
+
+  const localIds = new Set(collections.map((c) => c.id));
+  const toDelete =
+    remote?.filter((row) => !localIds.has(row.id)).map((row) => row.id) ?? [];
+
+  if (toDelete.length > 0) {
+    const { error } = await supabase
+      .from('collections')
+      .delete()
+      .eq('user_id', userId)
+      .in('id', toDelete);
+    if (error) throw error;
+  }
+
+  if (collections.length === 0) return;
+
+  const { error: upsertError } = await supabase.from('collections').upsert(
+    collections.map((collection) => ({
+      id: collection.id,
+      user_id: userId,
+      name: collection.name,
+      updated_at: collection.updatedAt,
+    })),
+    { onConflict: 'id' },
+  );
+  if (upsertError) throw upsertError;
+
+  await Promise.all(
+    collections.map(async (collection) => {
+      const { data: remoteItems, error: itemsReadError } = await supabase
+        .from('collection_items')
+        .select('curio_id')
+        .eq('collection_id', collection.id);
+      if (itemsReadError) throw itemsReadError;
+
+      const localSet = new Set(collection.curioIds);
+      const removeIds =
+        remoteItems
+          ?.filter((row) => !localSet.has(row.curio_id))
+          .map((row) => row.curio_id) ?? [];
+
+      if (removeIds.length > 0) {
+        const { error } = await supabase
+          .from('collection_items')
+          .delete()
+          .eq('collection_id', collection.id)
+          .in('curio_id', removeIds);
+        if (error) throw error;
+      }
+
+      if (collection.curioIds.length === 0) return;
+
+      const { error } = await supabase.from('collection_items').upsert(
+        collection.curioIds.map((curio_id) => ({
+          collection_id: collection.id,
+          curio_id,
+        })),
+        { onConflict: 'collection_id,curio_id' },
+      );
+      if (error) throw error;
+    }),
+  );
+}
+
 /**
  * Pull cloud state and merge with local using latest `user_app_state.updated_at`.
  */
@@ -231,6 +328,7 @@ export async function pullAndMerge(): Promise<void> {
           remote.interests,
           remote.bookmarks,
           remote.seenCurioIds,
+          remote.collections,
         );
         await useAppStore.getState().applySyncedState(merged);
         await setLocalUpdatedAt(remote.appState.updated_at);
@@ -255,6 +353,7 @@ export async function pullAndMerge(): Promise<void> {
           remote.interests,
           remote.bookmarks,
           remote.seenCurioIds,
+          remote.collections,
         );
         await useAppStore.getState().applySyncedState(merged);
         await setLocalUpdatedAt(remote.appState.updated_at);
@@ -323,6 +422,7 @@ export async function pushAppState(): Promise<void> {
         pushInterests(userId, state.interests),
         pushBookmarks(userId, state.bookmarks),
         pushSeenCurios(userId, state.seenCurioIds),
+        pushCollections(userId, state.collections),
       ]);
 
       if (data?.updated_at) {

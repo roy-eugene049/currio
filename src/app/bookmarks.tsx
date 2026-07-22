@@ -10,16 +10,19 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BookmarkLibraryCard } from '@/components/bookmarks/BookmarkLibraryCard';
 import {
-  BookmarksFilterRail,
+  BookmarksFilterButton,
+  BookmarksFilterSheet,
   type BookmarkFilter,
-} from '@/components/bookmarks/BookmarksFilterRail';
+} from '@/components/bookmarks/BookmarksFilterSheet';
 import { useProfilePalette } from '@/hooks/useProfilePalette';
 import { useTheme } from '@/hooks/useTheme';
 import { getBookmarkedCurios, resolveBookmarkedCurios } from '@/services/curioService';
 import { isRemoteCuriosEnabled } from '@/services/curioApiService';
 import { useAppStore } from '@/store/useAppStore';
+import { useCollectionSheetStore } from '@/store/useCollectionSheetStore';
 import { BRAND } from '@/theme/brand';
 import type { Category } from '@/types/curio';
+import { sortCollections } from '@/utils/collections';
 
 export default function BookmarksScreen() {
   const router = useRouter();
@@ -29,9 +32,12 @@ export default function BookmarksScreen() {
 
   const bookmarkIds = useAppStore((s) => s.bookmarks);
   const interests = useAppStore((s) => s.interests);
+  const collections = useAppStore((s) => s.collections);
+  const openSaveSheet = useCollectionSheetStore((s) => s.openSaveSheet);
   const remoteEnabled = isRemoteCuriosEnabled();
 
-  const [activeFilter, setActiveFilter] = useState<BookmarkFilter>('All');
+  const [activeFilter, setActiveFilter] = useState<BookmarkFilter>({ type: 'all' });
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const { data: savedCurrios = [] } = useQuery({
     queryKey: ['bookmarks', bookmarkIds, remoteEnabled],
@@ -65,15 +71,42 @@ export default function BookmarksScreen() {
     });
   }, [interests, savedCurrios]);
 
+  const sortedCollections = useMemo(
+    () => sortCollections(collections),
+    [collections],
+  );
+
   useEffect(() => {
-    if (activeFilter === 'All' || topicFilters.includes(activeFilter)) return;
-    setActiveFilter('All');
-  }, [activeFilter, topicFilters]);
+    if (activeFilter.type === 'all') return;
+    if (activeFilter.type === 'topic') {
+      if (!topicFilters.includes(activeFilter.category)) {
+        setActiveFilter({ type: 'all' });
+      }
+      return;
+    }
+    if (!collections.some((c) => c.id === activeFilter.collectionId)) {
+      setActiveFilter({ type: 'all' });
+    }
+  }, [activeFilter, collections, topicFilters]);
 
   const filteredCurrios = useMemo(() => {
-    if (activeFilter === 'All') return savedCurrios;
-    return savedCurrios.filter((curio) => curio.category === activeFilter);
-  }, [activeFilter, savedCurrios]);
+    if (activeFilter.type === 'all') return savedCurrios;
+    if (activeFilter.type === 'topic') {
+      return savedCurrios.filter((curio) => curio.category === activeFilter.category);
+    }
+    const collection = collections.find((c) => c.id === activeFilter.collectionId);
+    if (!collection) return savedCurrios;
+    const idSet = new Set(collection.curioIds);
+    return savedCurrios.filter((curio) => idSet.has(curio.id));
+  }, [activeFilter, collections, savedCurrios]);
+
+  const activeFilterLabel = useMemo(() => {
+    if (activeFilter.type === 'all') return 'All saved';
+    if (activeFilter.type === 'topic') return activeFilter.category;
+    return (
+      collections.find((c) => c.id === activeFilter.collectionId)?.name ?? 'Collection'
+    );
+  }, [activeFilter, collections]);
 
   const openCurrio = (id: string) => {
     router.push(`/currio/${id}` as Href);
@@ -87,8 +120,8 @@ export default function BookmarksScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={[styles.mesh, styles.meshOne, { opacity: isDark ? 0.35 : 0.22 }]} />
-      <View style={[styles.mesh, styles.meshTwo, { opacity: isDark ? 0.2 : 0.14 }]} />
+      <View style={[styles.mesh, styles.meshOne, { opacity: isDark ? 0.16 : 0.1 }]} />
+      <View style={[styles.mesh, styles.meshTwo, { opacity: isDark ? 0.1 : 0.07 }]} />
 
       <SafeAreaView style={styles.safe} edges={['top']}>
         <Animated.View entering={FadeInDown.duration(380)} style={styles.header}>
@@ -108,7 +141,7 @@ export default function BookmarksScreen() {
           </Pressable>
 
           <View style={styles.headerCopy}>
-            <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR COLLECTION</Text>
+            <Text style={[styles.kicker, { color: palette.kicker }]}>YOUR LIBRARY</Text>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: palette.tileTitle }]}>Saved</Text>
               <View
@@ -126,21 +159,96 @@ export default function BookmarksScreen() {
               </View>
             </View>
             <Text style={[styles.subtitle, { color: palette.tileSubtitle }]}>
-              Currios you&apos;ve bookmarked to revisit
+              Bookmarks and collections — ready when curiosity strikes.
             </Text>
           </View>
+
+          <BookmarksFilterButton
+            active={activeFilter}
+            activeLabel={activeFilterLabel}
+            onPress={() => setFilterOpen(true)}
+            isDark={isDark}
+          />
         </Animated.View>
 
-        <BookmarksFilterRail
-          topics={topicFilters}
-          counts={topicCounts}
-          totalCount={savedCurrios.length}
-          active={activeFilter}
-          onChange={setActiveFilter}
-          isDark={isDark}
-          textColor={palette.tileTitle}
-          mutedColor={palette.tileSubtitle}
-        />
+        {activeFilter.type !== 'all' || sortedCollections.length > 0 ? (
+          <Animated.View entering={FadeInDown.delay(80).duration(320)} style={styles.chipRow}>
+            {activeFilter.type !== 'all' ? (
+              <Pressable
+                onPress={() => setActiveFilter({ type: 'all' })}
+                style={[
+                  styles.activeChip,
+                  {
+                    backgroundColor: isDark
+                      ? `${BRAND.electric}33`
+                      : `${BRAND.electric}14`,
+                    borderColor: BRAND.electric,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    activeFilter.type === 'collection'
+                      ? 'folder'
+                      : 'funnel'
+                  }
+                  size={13}
+                  color={BRAND.electric}
+                />
+                <Text style={styles.activeChipText}>{activeFilterLabel}</Text>
+                <Ionicons name="close" size={14} color={BRAND.electric} />
+              </Pressable>
+            ) : null}
+
+            {sortedCollections.slice(0, 3).map((collection) => {
+              const selected =
+                activeFilter.type === 'collection' &&
+                activeFilter.collectionId === collection.id;
+              return (
+                <Pressable
+                  key={collection.id}
+                  onPress={() =>
+                    setActiveFilter(
+                      selected
+                        ? { type: 'all' }
+                        : { type: 'collection', collectionId: collection.id },
+                    )
+                  }
+                  style={[
+                    styles.quickChip,
+                    {
+                      backgroundColor: selected
+                        ? BRAND.electric
+                        : isDark
+                          ? `${BRAND.deepMuted}CC`
+                          : `${BRAND.mint}CC`,
+                      borderColor: selected
+                        ? BRAND.electric
+                        : isDark
+                          ? `${BRAND.lavender}28`
+                          : `${BRAND.electric}16`,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="folder-outline"
+                    size={12}
+                    color={selected ? BRAND.mist : BRAND.electric}
+                  />
+                  <Text
+                    style={[
+                      styles.quickChipText,
+                      { color: selected ? BRAND.mist : palette.tileTitle },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {collection.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Animated.View>
+        ) : null}
 
         <ScrollView
           contentContainerStyle={[
@@ -169,8 +277,8 @@ export default function BookmarksScreen() {
                 Your shelf is empty
               </Text>
               <Text style={[styles.emptyBody, { color: palette.tileSubtitle }]}>
-                Save currios from home and they&apos;ll land here — ready whenever you
-                want another spark of curiosity.
+                Save curios from home, then group them into collections from the
+                filter button.
               </Text>
             </View>
           ) : filteredCurrios.length === 0 ? (
@@ -183,19 +291,19 @@ export default function BookmarksScreen() {
                 },
               ]}
             >
-              <Ionicons name="options-outline" size={28} color={BRAND.electric} />
+              <Ionicons name="folder-open-outline" size={28} color={BRAND.electric} />
               <Text style={[styles.emptyTitle, { color: palette.tileTitle }]}>
-                No matches for this topic
+                Nothing in this view
               </Text>
               <Text style={[styles.emptyBody, { color: palette.tileSubtitle }]}>
-                Pick another filter above or bookmark more currios in this category.
+                Clear the filter or add more curios to this collection.
               </Text>
               <Pressable
-                onPress={() => setActiveFilter('All')}
+                onPress={() => setActiveFilter({ type: 'all' })}
                 style={styles.resetBtn}
                 accessibilityRole="button"
               >
-                <Text style={styles.resetText}>Show all topics</Text>
+                <Text style={styles.resetText}>Show all saved</Text>
               </Pressable>
             </View>
           ) : (
@@ -206,11 +314,23 @@ export default function BookmarksScreen() {
                 index={index}
                 isDark={isDark}
                 onPress={() => openCurrio(curio.id)}
+                onOrganize={() => openSaveSheet(curio.id)}
               />
             ))
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <BookmarksFilterSheet
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        topics={topicFilters}
+        counts={topicCounts}
+        totalCount={savedCurrios.length}
+        active={activeFilter}
+        onChange={setActiveFilter}
+        palette={palette}
+      />
     </View>
   );
 }
@@ -245,7 +365,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 20,
     paddingTop: 6,
-    paddingBottom: 20,
+    paddingBottom: 14,
   },
   backHit: {
     marginTop: 4,
@@ -294,7 +414,42 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     lineHeight: 20,
-    maxWidth: '92%',
+    maxWidth: '96%',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  activeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  activeChipText: {
+    color: BRAND.electric,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    maxWidth: 140,
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   list: {
     paddingHorizontal: 20,

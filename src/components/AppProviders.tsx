@@ -5,6 +5,7 @@ import { View } from 'react-native';
 
 import { OAuthNavigationEffect } from '@/components/OAuthNavigationEffect';
 import { AuthSessionGuard } from '@/components/AuthSessionGuard';
+import { SaveToCollectionSheet } from '@/components/bookmarks/SaveToCollectionSheet';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { useTheme } from '@/hooks/useTheme';
 import { useAppStore } from '@/store/useAppStore';
@@ -69,6 +70,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <OAuthNavigationEffect />
         <AuthSessionGuard />
         {children}
+        <SaveToCollectionSheet />
         <ToastHost />
       </HydrationGate>
     </QueryClientProvider>

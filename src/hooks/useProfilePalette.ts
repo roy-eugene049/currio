@@ -28,37 +28,41 @@ export type ProfilePalette = {
   blurTint: 'light' | 'dark';
 };
 
+/**
+ * Profile / library surfaces.
+ * Dark text uses mist/pale (not lavender-on-purple). Lavender stays for borders & glows.
+ */
 export function useProfilePalette(isDark: boolean): ProfilePalette {
   return useMemo(
     () =>
       isDark
         ? {
             gradient: [BRAND.deep, '#3D0E7A', BRAND.deepMuted],
-            orbOpacity: 0.12,
-            kicker: `${BRAND.lavender}99`,
+            orbOpacity: 0.1,
+            kicker: `${BRAND.mist}99`,
             displayName: BRAND.mist,
-            email: `${BRAND.lavender}BB`,
+            email: `${BRAND.mist}BB`,
             avatarBg: BRAND.deepMuted,
             memberPillBg: `${BRAND.electric}33`,
             memberPillBorder: `${BRAND.lavender}44`,
-            memberText: BRAND.lavender,
+            memberText: BRAND.mist,
             bentoBorder: [`${BRAND.electric}44`, `${BRAND.lavender}18`],
-            bentoInner: `${BRAND.deep}AA`,
-            bentoIcon: BRAND.lavender,
+            bentoInner: `${BRAND.deep}CC`,
+            bentoIcon: BRAND.pale,
             bentoValue: BRAND.mist,
-            bentoLabel: `${BRAND.lavender}CC`,
-            sectionTag: BRAND.lavender,
-            tileBg: `${BRAND.deepMuted}CC`,
-            tileBorder: `${BRAND.lavender}22`,
+            bentoLabel: `${BRAND.mist}AA`,
+            sectionTag: BRAND.pale,
+            tileBg: `${BRAND.deepMuted}EE`,
+            tileBorder: `${BRAND.lavender}28`,
             tileTitle: BRAND.mist,
-            tileSubtitle: `${BRAND.lavender}AA`,
-            tileAccent: [`${BRAND.lavender}33`, `${BRAND.electric}22`],
-            iconWrapBg: `${BRAND.electric}22`,
+            tileSubtitle: `${BRAND.mist}AA`,
+            tileAccent: [`${BRAND.electric}44`, `${BRAND.pale}22`],
+            iconWrapBg: `${BRAND.electric}28`,
             blurTint: 'dark',
           }
         : {
             gradient: [...LIGHT.gradient.profile],
-            orbOpacity: 0.14,
+            orbOpacity: 0.1,
             kicker: LIGHT.textMuted,
             displayName: LIGHT.text,
             email: LIGHT.textSecondary,
@@ -76,7 +80,7 @@ export function useProfilePalette(isDark: boolean): ProfilePalette {
             tileBorder: LIGHT.border,
             tileTitle: LIGHT.text,
             tileSubtitle: LIGHT.textMuted,
-            tileAccent: [`${BRAND.lavender}70`, `${BRAND.electric}12`],
+            tileAccent: [`${BRAND.electric}22`, `${BRAND.lavender}40`],
             iconWrapBg: `${BRAND.electric}10`,
             blurTint: 'light',
           },
