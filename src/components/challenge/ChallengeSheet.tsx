@@ -306,7 +306,7 @@ export function ChallengeSheet() {
                 </View>
                 <Text style={styles.heroTitle}>Curiosity quiz</Text>
                 <Text style={styles.heroSubtitle}>
-                  One answer is true. Pick it — or skip.
+                  One statement is true. The rest were altered. Skip anytime.
                 </Text>
               </View>
             )}

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -20,6 +20,86 @@ import { BRAND } from '@/theme/brand';
 import { sortCollections } from '@/utils/collections';
 import { showActionFeedback } from '@/utils/actionFeedback';
 
+/**
+ * One collection row: [folder] name · count [check] — always a single horizontal line.
+ * Layout lives on an inner View (not Pressable) so Android / Expo Go apply flex correctly.
+ */
+function CollectionListRow({
+  name,
+  count,
+  selected,
+  isDark,
+  textColor,
+  mutedColor,
+  borderColor,
+  surfaceColor,
+  onPress,
+}: {
+  name: string;
+  count: number;
+  selected: boolean;
+  isDark: boolean;
+  textColor: string;
+  mutedColor: string;
+  borderColor: string;
+  surfaceColor: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }}>
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.row,
+            {
+              backgroundColor: pressed
+                ? isDark
+                  ? `${BRAND.electric}44`
+                  : `${BRAND.electric}18`
+                : surfaceColor,
+              borderColor,
+              opacity: pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.folderIcon,
+              {
+                backgroundColor: selected
+                  ? BRAND.electric
+                  : isDark
+                    ? `${BRAND.electric}28`
+                    : `${BRAND.electric}12`,
+              },
+            ]}
+          >
+            <Ionicons
+              name={selected ? 'folder' : 'folder-outline'}
+              size={18}
+              color={selected ? BRAND.mist : BRAND.electric}
+            />
+          </View>
+
+          <Text style={[styles.rowTitle, { color: textColor }]} numberOfLines={1}>
+            {name}
+          </Text>
+
+          <Text style={[styles.rowMeta, { color: mutedColor }]} numberOfLines={1}>
+            {count} saved
+          </Text>
+
+          <Ionicons
+            name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={22}
+            color={selected ? BRAND.electric : mutedColor}
+          />
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 export function SaveToCollectionSheet() {
   const curioId = useCollectionSheetStore((s) => s.saveCurioId);
   const closeSaveSheet = useCollectionSheetStore((s) => s.closeSaveSheet);
@@ -34,6 +114,10 @@ export function SaveToCollectionSheet() {
   const [draftName, setDraftName] = useState('');
 
   const sorted = useMemo(() => sortCollections(collections), [collections]);
+
+  useEffect(() => {
+    if (!curioId) setDraftName('');
+  }, [curioId]);
 
   const handleToggle = async (collectionId: string) => {
     if (!curioId) return;
@@ -76,7 +160,16 @@ export function SaveToCollectionSheet() {
             },
           ]}
         >
-          <View style={[styles.handle, { backgroundColor: isDark ? `${BRAND.mist}44` : `${BRAND.electric}33` }]} />
+          <View
+            style={[
+              styles.handle,
+              {
+                backgroundColor: isDark
+                  ? `${BRAND.mist}44`
+                  : `${BRAND.electric}33`,
+              },
+            ]}
+          />
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text
@@ -182,74 +275,34 @@ export function SaveToCollectionSheet() {
                   ? collection.curioIds.includes(curioId)
                   : false;
                 return (
-                  <Pressable
+                  <CollectionListRow
                     key={collection.id}
+                    name={collection.name}
+                    count={collection.curioIds.length}
+                    selected={selected}
+                    isDark={isDark}
+                    textColor={isDark ? BRAND.mist : colors.text}
+                    mutedColor={
+                      isDark ? `${BRAND.mist}99` : colors.textMuted
+                    }
+                    borderColor={
+                      selected
+                        ? BRAND.electric
+                        : isDark
+                          ? `${BRAND.lavender}28`
+                          : colors.border
+                    }
+                    surfaceColor={
+                      selected
+                        ? isDark
+                          ? `${BRAND.electric}33`
+                          : `${BRAND.electric}12`
+                        : isDark
+                          ? `${BRAND.deepMuted}AA`
+                          : colors.card
+                    }
                     onPress={() => void handleToggle(collection.id)}
-                    style={({ pressed }) => [
-                      styles.row,
-                      {
-                        backgroundColor: selected
-                          ? isDark
-                            ? `${BRAND.electric}33`
-                            : `${BRAND.electric}12`
-                          : isDark
-                            ? `${BRAND.deepMuted}AA`
-                            : colors.card,
-                        borderColor: selected
-                          ? BRAND.electric
-                          : isDark
-                            ? `${BRAND.lavender}28`
-                            : colors.border,
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.folderIcon,
-                        {
-                          backgroundColor: selected
-                            ? BRAND.electric
-                            : isDark
-                              ? `${BRAND.electric}28`
-                              : `${BRAND.electric}12`,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={selected ? 'folder' : 'folder-outline'}
-                        size={18}
-                        color={selected ? BRAND.mist : BRAND.electric}
-                      />
-                    </View>
-                    <View style={styles.rowCopy}>
-                      <Text
-                        style={[
-                          styles.rowTitle,
-                          { color: isDark ? BRAND.mist : colors.text },
-                        ]}
-                      >
-                        {collection.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.rowMeta,
-                          {
-                            color: isDark
-                              ? `${BRAND.mist}99`
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        {collection.curioIds.length} saved
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={selected ? BRAND.electric : colors.iconMuted}
-                    />
-                  </Pressable>
+                  />
                 );
               })
             )}
@@ -278,7 +331,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: `${BRAND.lavender}55`,
     marginBottom: 14,
   },
   header: {
@@ -354,8 +406,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    flexWrap: 'nowrap',
+    width: '100%',
+    minHeight: 56,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
   },
@@ -365,19 +420,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  rowCopy: {
-    flex: 1,
+    marginRight: 12,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   rowTitle: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     fontSize: 15,
     fontWeight: '700',
+    marginRight: 8,
   },
   rowMeta: {
+    flexGrow: 0,
+    flexShrink: 0,
     fontSize: 12,
-    marginTop: 2,
-  },
-  pressed: {
-    opacity: 0.9,
+    fontWeight: '600',
+    marginRight: 10,
   },
 });
