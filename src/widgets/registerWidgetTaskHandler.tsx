@@ -1,11 +1,8 @@
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
-import {
-  registerWidgetTaskHandler,
-  type WidgetTaskHandlerProps,
-} from 'react-native-android-widget';
 
 import {
-  fallbackWidgetCopy,
+  buildWidgetViewModel,
   readWidgetCurioSnapshot,
 } from '@/services/widgetService';
 
@@ -14,39 +11,38 @@ import {
   DailyCurioWidget,
 } from './DailyCurioWidget';
 
-async function renderDailyCurioWidget(
-  renderWidget: WidgetTaskHandlerProps['renderWidget'],
-) {
-  const snapshot = await readWidgetCurioSnapshot();
-  const fallback = fallbackWidgetCopy();
-  renderWidget(
-    <DailyCurioWidget
-      title={snapshot?.title ?? fallback.title}
-      category={snapshot?.category ?? fallback.category}
-    />,
-  );
-}
-
-async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
-  if (props.widgetInfo.widgetName !== DAILY_CURIO_WIDGET_NAME) return;
-
-  switch (props.widgetAction) {
-    case 'WIDGET_ADDED':
-    case 'WIDGET_UPDATE':
-    case 'WIDGET_RESIZED':
-      await renderDailyCurioWidget(props.renderWidget);
-      break;
-    case 'WIDGET_CLICK':
-      // OPEN_APP is handled natively; nothing else to do.
-      break;
-    case 'WIDGET_DELETED':
-      break;
-    default:
-      break;
-  }
-}
-
 export function registerDailyCurioWidgetTaskHandler() {
-  if (Platform.OS !== 'android') return;
-  registerWidgetTaskHandler(widgetTaskHandler);
+  // Native widget module is unavailable in Expo Go.
+  if (Platform.OS !== 'android' || isRunningInExpoGo()) return;
+
+  void import('react-native-android-widget').then(
+    ({ registerWidgetTaskHandler }) => {
+      registerWidgetTaskHandler(async (props) => {
+        if (props.widgetInfo.widgetName !== DAILY_CURIO_WIDGET_NAME) return;
+
+        switch (props.widgetAction) {
+          case 'WIDGET_ADDED':
+          case 'WIDGET_UPDATE':
+          case 'WIDGET_RESIZED': {
+            const snapshot = await readWidgetCurioSnapshot();
+            const view = buildWidgetViewModel(snapshot);
+            props.renderWidget(
+              <DailyCurioWidget
+                title={view.title}
+                category={view.category}
+                streak={view.streak}
+                footer={view.footer}
+                nudgeActive={view.nudgeActive}
+              />,
+            );
+            break;
+          }
+          case 'WIDGET_CLICK':
+          case 'WIDGET_DELETED':
+          default:
+            break;
+        }
+      });
+    },
+  );
 }

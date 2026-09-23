@@ -2,25 +2,23 @@
   "expo": {
     "name": "currio",
     "slug": "currio",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "currio",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.twiicetech.currio",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#31006E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
@@ -64,7 +62,7 @@
             {
               "name": "DailyCurio",
               "label": "Today’s Currio",
-              "description": "Today’s curio title — tap to open Currio",
+              "description": "Today’s curio, streak, and next curiosity nudge",
               "minWidth": "250dp",
               "minHeight": "110dp",
               "targetCellWidth": 4,
@@ -75,7 +73,12 @@
             }
           ]
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

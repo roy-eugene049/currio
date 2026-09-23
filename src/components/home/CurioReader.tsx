@@ -69,9 +69,11 @@ export function CurioReader({
   const handleNext = () => {
     if (isLoadingNext || !onNextCurio) return;
 
-    nextScale.value = withSpring(0.96, { damping: 14, stiffness: 320 }, () => {
-      nextScale.value = withSpring(1, { damping: 12, stiffness: 220 });
-    });
+    nextScale.set(
+      withSpring(0.96, { damping: 14, stiffness: 320 }, () => {
+        nextScale.set(withSpring(1, { damping: 12, stiffness: 220 }));
+      }),
+    );
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
@@ -303,7 +305,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backdropLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 0,
   },
   readerStage: {

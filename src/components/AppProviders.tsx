@@ -30,12 +30,69 @@ function ReminderRescheduleOnForeground() {
         appState.current === 'background' || appState.current === 'inactive';
       appState.current = next;
       if (!wasBackground || next !== 'active') return;
-      if (!useAppStore.getState().learningRemindersEnabled) return;
-      void useAppStore.getState().rescheduleReminders();
+      if (useAppStore.getState().learningRemindersEnabled) {
+        void useAppStore.getState().rescheduleReminders();
+      }
+      // Clear forced nudge chrome once they open the app; refresh streak/nudge footer.
+      void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+        syncDailyCurioWidget({ nudgeActiveUntil: null }),
+      );
     };
 
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
+  }, []);
+
+  return null;
+}
+
+function NudgeWidgetBridge() {
+  useEffect(() => {
+    let received: { remove: () => void } | undefined;
+    let response: { remove: () => void } | undefined;
+    let cancelled = false;
+
+    void (async () => {
+      const { isRunningInExpoGo } = await import('expo');
+      const { Platform } = await import('react-native');
+      // Expo Go Android throws on import of expo-notifications (push removed in SDK 53).
+      if (isRunningInExpoGo() && Platform.OS === 'android') return;
+
+      const Notifications = await import('expo-notifications');
+      if (cancelled) return;
+
+      received = Notifications.addNotificationReceivedListener((notification) => {
+        const type = notification.request.content.data?.type;
+        if (
+          type === 'learning_reminder' ||
+          type === 'learning_reminder_test' ||
+          type === 'streak_at_risk'
+        ) {
+          void import('@/services/widgetService').then(({ markWidgetNudgeActive }) =>
+            markWidgetNudgeActive(),
+          );
+        }
+      });
+
+      response = Notifications.addNotificationResponseReceivedListener((event) => {
+        const type = event.notification.request.content.data?.type;
+        if (
+          type === 'learning_reminder' ||
+          type === 'learning_reminder_test' ||
+          type === 'streak_at_risk'
+        ) {
+          void import('@/services/widgetService').then(({ markWidgetNudgeActive }) =>
+            markWidgetNudgeActive(),
+          );
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      received?.remove();
+      response?.remove();
+    };
   }, []);
 
   return null;
@@ -89,6 +146,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <HydrationGate>
         <ReminderRescheduleOnForeground />
+        <NudgeWidgetBridge />
         <OAuthNavigationEffect />
         <AuthSessionGuard />
         {children}

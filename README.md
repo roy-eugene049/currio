@@ -2,7 +2,7 @@
 
 **Learn something new every day.**
 
-Currio is a curiosity micro-learning app — bite-sized curios, streaks that stay gentle, topics you choose, and tools that help facts stick. Built with Expo (SDK 54) and Supabase.
+Currio is a curiosity micro-learning app — bite-sized curios, streaks that stay gentle, topics you choose, and tools that help facts stick. Built with Expo (SDK 57) and Supabase.
 
 **Current version:** [1.4.0](./docs/RELEASE_NOTES.md) · [Release notes](./docs/RELEASE_NOTES.md)
 
@@ -74,7 +74,7 @@ npx expo start -c
 | [Welcome email](./docs/WELCOME_EMAIL.md) | Resend welcome flow |
 | [Weekly digest](./docs/WEEKLY_DIGEST.md) | Sunday digest setup |
 
-Expo SDK reference for this project: [docs.expo.dev/versions/v54.0.0](https://docs.expo.dev/versions/v54.0.0/)
+Expo SDK reference for this project: [docs.expo.dev/versions/v57.0.0](https://docs.expo.dev/versions/v57.0.0/)
 
 ---
 

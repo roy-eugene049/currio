@@ -103,7 +103,7 @@ function mutateNegation(text: string): string | null {
 
 /** Swap directional / comparative language that reverses the claim. */
 function mutatePolarity(text: string): string | null {
-  const pairs: Array<[RegExp, string]> = [
+  const pairs: [RegExp, string][] = [
     [/\balways\b/i, 'never'],
     [/\bnever\b/i, 'always'],
     [/\bmore\b/i, 'less'],

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -112,12 +112,14 @@ export function SaveToCollectionSheet() {
   const toggleCurioCollection = useAppStore((s) => s.toggleCurioCollection);
 
   const [draftName, setDraftName] = useState('');
+  const [draftForCurioId, setDraftForCurioId] = useState(curioId);
+
+  if (curioId !== draftForCurioId) {
+    setDraftForCurioId(curioId);
+    setDraftName('');
+  }
 
   const sorted = useMemo(() => sortCollections(collections), [collections]);
-
-  useEffect(() => {
-    if (!curioId) setDraftName('');
-  }, [curioId]);
 
   const handleToggle = async (collectionId: string) => {
     if (!curioId) return;

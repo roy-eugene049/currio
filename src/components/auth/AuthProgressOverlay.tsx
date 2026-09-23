@@ -87,7 +87,7 @@ export function AuthProgressOverlay({ title, message }: AuthProgressOverlayProps
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   indicatorAura: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 33,
   },
   iconDisc: {

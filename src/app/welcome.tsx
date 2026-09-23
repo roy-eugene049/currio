@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   graphics: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   orb: {
     position: 'absolute',

@@ -150,7 +150,7 @@ async function fetchPexelsImage(
   if (!response.ok) return null;
 
   const data = (await response.json()) as {
-    photos?: Array<{ src?: { large2x?: string; large?: string; portrait?: string } }>;
+    photos?: { src?: { large2x?: string; large?: string; portrait?: string } }[];
   };
 
   const photo = data.photos?.[0]?.src;
@@ -158,7 +158,7 @@ async function fetchPexelsImage(
 }
 
 type WikimediaPage = {
-  imageinfo?: Array<{ thumburl?: string; url?: string }>;
+  imageinfo?: { thumburl?: string; url?: string }[];
 };
 
 async function fetchWikimediaImage(query: string, pickIndex: number): Promise<string | null> {

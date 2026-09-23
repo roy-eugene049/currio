@@ -16,7 +16,14 @@ import { useAppStore } from '@/store/useAppStore';
 WebBrowser.maybeCompleteAuthSession();
 
 if (__DEV__) {
-  LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
+  LogBox.ignoreLogs([
+    'SafeAreaView has been deprecated',
+    // RN 0.86 deprecations triggered by Expo Go / expo-router / @expo/log-box — not app code.
+    'Clipboard has been extracted from react-native core',
+    'ProgressBarAndroid has been extracted from react-native core',
+    'PushNotificationIOS has been extracted from react-native core',
+    'InteractionManager has been deprecated',
+  ]);
 }
 
 export default function RootLayout() {

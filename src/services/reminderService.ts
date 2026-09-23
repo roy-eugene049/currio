@@ -1,9 +1,51 @@
+import { isRunningInExpoGo } from 'expo';
+import type { NotificationContentInput } from 'expo-notifications';
 import { Image, Linking, Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 
 import { BRAND } from '@/theme/brand';
 import { getTodayDateString } from '@/utils/date';
 
+type NotificationsModule = typeof import('expo-notifications');
+
+let notificationHandlerReady = false;
+let notificationsModulePromise: Promise<NotificationsModule | null> | null = null;
+
+/**
+ * Expo Go on Android throws if `expo-notifications` is imported — remote push
+ * was removed from Expo Go in SDK 53. Local nudges still work in
+ * development / production builds.
+ */
+function canUseNotificationsModule(): boolean {
+  if (Platform.OS !== 'ios' && Platform.OS !== 'android') return false;
+  if (isRunningInExpoGo() && Platform.OS === 'android') return false;
+  return true;
+}
+
+async function getNotifications(): Promise<NotificationsModule | null> {
+  if (!canUseNotificationsModule()) return null;
+  if (!notificationsModulePromise) {
+    notificationsModulePromise = import('expo-notifications').catch((error) => {
+      console.warn('[Currio] Failed to load expo-notifications', error);
+      return null;
+    });
+  }
+  return notificationsModulePromise;
+}
+
+async function ensureNotificationHandler(
+  Notifications: NotificationsModule,
+): Promise<void> {
+  if (notificationHandlerReady) return;
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+  notificationHandlerReady = true;
+}
 export type ReminderTime = {
   hour: number;
   minute: number;
@@ -68,17 +110,8 @@ const REMINDER_COPY = [
   },
 ] as const;
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 function supportsLocalNotifications() {
-  return Platform.OS === 'ios' || Platform.OS === 'android';
+  return canUseNotificationsModule();
 }
 
 function resolveRichLogoUri(): string | null {
@@ -95,7 +128,7 @@ function brandedNudgeContent(input: {
   body: string;
   subtitle?: string;
   data: Record<string, unknown>;
-}): Notifications.NotificationContentInput {
+}): NotificationContentInput {
   const logoUri = resolveRichLogoUri();
   const subtitle = input.subtitle ?? 'Currio';
 
@@ -109,23 +142,20 @@ function brandedNudgeContent(input: {
       ? {
           channelId: CHANNEL_ID,
           color: NOTIFICATION_COLOR,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: 'high',
         }
-      : {
-          // Rich logo preview in the expanded iOS notification.
-          ...(logoUri
-            ? {
-                attachments: [
-                  {
-                    identifier: 'currio-logo',
-                    url: logoUri,
-                    type: 'public.png',
-                  },
-                ],
-              }
-            : null),
-        }),
-  };
+      : logoUri
+        ? {
+            attachments: [
+              {
+                identifier: 'currio-logo',
+                url: logoUri,
+                type: 'public.png',
+              },
+            ],
+          }
+        : null),
+  } as NotificationContentInput;
 }
 
 function clampHour(hour: number): number {
@@ -224,7 +254,7 @@ export function normalizeReminderHours(hours: number[]): number[] {
   ).map((t) => t.hour);
 }
 
-async function ensureAndroidChannel() {
+async function ensureAndroidChannel(Notifications: NotificationsModule) {
   if (Platform.OS !== 'android') return;
 
   // Drop the legacy DEFAULT-importance channel if present.
@@ -246,9 +276,11 @@ async function ensureAndroidChannel() {
 }
 
 export async function requestLearningReminderPermission(): Promise<boolean> {
-  if (!supportsLocalNotifications()) return false;
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
 
-  await ensureAndroidChannel();
+  await ensureNotificationHandler(Notifications);
+  await ensureAndroidChannel(Notifications);
 
   const current = await Notifications.getPermissionsAsync();
   if (
@@ -273,7 +305,8 @@ export async function requestLearningReminderPermission(): Promise<boolean> {
 }
 
 export async function getReminderPermissionGranted(): Promise<boolean> {
-  if (!supportsLocalNotifications()) return false;
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
   const current = await Notifications.getPermissionsAsync();
   return (
     current.granted ||
@@ -282,7 +315,8 @@ export async function getReminderPermissionGranted(): Promise<boolean> {
 }
 
 export async function cancelLearningReminders(): Promise<void> {
-  if (!supportsLocalNotifications()) return;
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
 
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
@@ -426,7 +460,10 @@ function androidTriggerExtras() {
  */
 const SCHEDULE_HORIZON_DAYS = 14;
 
-async function scheduleDailyNudges(times: ReminderTime[]): Promise<number> {
+async function scheduleDailyNudges(
+  Notifications: NotificationsModule,
+  times: ReminderTime[],
+): Promise<number> {
   const normalized = normalizeReminderTimes(times);
   let scheduledCount = 0;
 
@@ -499,7 +536,10 @@ function nextStreakRiskDate(lastOpenDate: string | null): Date {
   return target;
 }
 
-async function scheduleStreakAtRisk(lastOpenDate: string | null): Promise<void> {
+async function scheduleStreakAtRisk(
+  Notifications: NotificationsModule,
+  lastOpenDate: string | null,
+): Promise<void> {
   const when = nextStreakRiskDate(lastOpenDate);
 
   await Notifications.scheduleNotificationAsync({
@@ -543,14 +583,13 @@ export async function syncLearningReminders(
       : DEFAULT_REMINDER_TIMES);
 
   if (!supportsLocalNotifications()) {
-    if (__DEV__) {
-      console.warn(
-        '[Currio] Local notifications are only available on iOS/Android.',
-      );
-    }
     return false;
   }
 
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
+
+  await ensureNotificationHandler(Notifications);
   await cancelLearningReminders();
 
   if (!enabled) return true;
@@ -563,11 +602,11 @@ export async function syncLearningReminders(
     return false;
   }
 
-  await ensureAndroidChannel();
-  const scheduledCount = await scheduleDailyNudges(times);
+  await ensureAndroidChannel(Notifications);
+  const scheduledCount = await scheduleDailyNudges(Notifications, times);
 
   if (streakAtRiskEnabled) {
-    await scheduleStreakAtRisk(lastOpenDate);
+    await scheduleStreakAtRisk(Notifications, lastOpenDate);
   }
 
   if (__DEV__) {
@@ -585,12 +624,15 @@ export async function syncLearningReminders(
 export async function scheduleTestNudge(
   delaySeconds = 8,
 ): Promise<boolean> {
-  if (!supportsLocalNotifications()) return false;
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
+
+  await ensureNotificationHandler(Notifications);
 
   const granted = await requestLearningReminderPermission();
   if (!granted) return false;
 
-  await ensureAndroidChannel();
+  await ensureAndroidChannel(Notifications);
   await Notifications.cancelScheduledNotificationAsync(TEST_ID).catch(() => undefined);
 
   await Notifications.scheduleNotificationAsync({
@@ -612,7 +654,8 @@ export async function scheduleTestNudge(
 }
 
 export async function getScheduledNudgeCount(): Promise<number> {
-  if (!supportsLocalNotifications()) return 0;
+  const Notifications = await getNotifications();
+  if (!Notifications) return 0;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   return scheduled.filter(
     (item) =>

@@ -1,6 +1,6 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router/react-navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getIntervalCurios,
@@ -50,7 +50,10 @@ export function useTodaysCurio() {
   const remoteEnabled = isRemoteCuriosEnabled() && Boolean(session);
 
   const queryClient = useQueryClient();
-  const queryKey = ['todays-curio', remoteEnabled ? 'remote' : 'local'] as const;
+  const queryKey = useMemo(
+    () => ['todays-curio', remoteEnabled ? 'remote' : 'local'] as const,
+    [remoteEnabled],
+  );
 
   const advancingRef = useRef(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
@@ -118,7 +121,7 @@ export function useTodaysCurio() {
         category: query.data!.category,
       }),
     );
-  }, [query.data?.id, query.data?.category, query.data?.title, warmPrefetch]);
+  }, [query.data, warmPrefetch]);
 
   const countedDailyIdRef = useRef<string | null>(null);
 

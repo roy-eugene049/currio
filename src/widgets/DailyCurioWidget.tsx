@@ -7,14 +7,25 @@ export const DAILY_CURIO_WIDGET_NAME = 'DailyCurio';
 export type DailyCurioWidgetProps = {
   title: string;
   category?: string;
-  subtitle?: string;
+  streak?: number;
+  /** Footer line: next nudge or active nudge copy */
+  footer?: string;
+  /** When a scheduled reminder is in its active window */
+  nudgeActive?: boolean;
 };
 
 export function DailyCurioWidget({
   title,
   category,
-  subtitle = 'Tap to open Currio',
+  streak = 0,
+  footer,
+  nudgeActive = false,
 }: DailyCurioWidgetProps) {
+  const streakLabel = streak > 0 ? `${streak} day streak` : 'Start a streak';
+  const footerText =
+    footer ??
+    (category ? `${category}  ·  Tap to open` : 'Tap to open Currio');
+
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -23,7 +34,7 @@ export function DailyCurioWidget({
         width: 'match_parent',
         flexDirection: 'column',
         justifyContent: 'center',
-        backgroundColor: BRAND.deep,
+        backgroundColor: nudgeActive ? BRAND.deepMuted : BRAND.deep,
         borderRadius: 20,
         padding: 16,
       }}
@@ -32,16 +43,26 @@ export function DailyCurioWidget({
         style={{
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: 8,
+          width: 'match_parent',
         }}
       >
         <TextWidget
-          text="TODAY’S CURRIO"
+          text={nudgeActive ? 'CURIOSITY NUDGE' : 'TODAY’S CURRIO'}
           style={{
             fontSize: 11,
             fontWeight: '700',
-            color: BRAND.lavender,
+            color: nudgeActive ? BRAND.mist : BRAND.lavender,
             letterSpacing: 1.2,
+          }}
+        />
+        <TextWidget
+          text={streakLabel}
+          style={{
+            fontSize: 11,
+            fontWeight: '700',
+            color: BRAND.pale,
           }}
         />
       </FlexWidget>
@@ -58,11 +79,11 @@ export function DailyCurioWidget({
       />
 
       <TextWidget
-        text={category ? `${category}  ·  ${subtitle}` : subtitle}
+        text={footerText}
         style={{
           fontSize: 12,
           fontWeight: '600',
-          color: BRAND.pale,
+          color: nudgeActive ? BRAND.lavender : BRAND.pale,
         }}
         maxLines={1}
       />

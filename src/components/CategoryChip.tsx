@@ -39,10 +39,10 @@ export function CategoryChip({
     <AnimatedPressable
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(0.95, { damping: 15 });
+        scale.set(withSpring(0.95, { damping: 15 }));
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15 });
+        scale.set(withSpring(1, { damping: 15 }));
       }}
       style={[
         animatedStyle,

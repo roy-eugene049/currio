@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.deep,
   },
   background: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: BRAND.deep,
   },
   content: {

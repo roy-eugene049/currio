@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, type Href } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,37 +76,36 @@ export default function BookmarksScreen() {
     [collections],
   );
 
-  useEffect(() => {
-    if (activeFilter.type === 'all') return;
+  const resolvedFilter = useMemo((): BookmarkFilter => {
+    if (activeFilter.type === 'all') return activeFilter;
     if (activeFilter.type === 'topic') {
-      if (!topicFilters.includes(activeFilter.category)) {
-        setActiveFilter({ type: 'all' });
-      }
-      return;
+      if (!topicFilters.includes(activeFilter.category)) return { type: 'all' };
+      return activeFilter;
     }
     if (!collections.some((c) => c.id === activeFilter.collectionId)) {
-      setActiveFilter({ type: 'all' });
+      return { type: 'all' };
     }
+    return activeFilter;
   }, [activeFilter, collections, topicFilters]);
 
   const filteredCurrios = useMemo(() => {
-    if (activeFilter.type === 'all') return savedCurrios;
-    if (activeFilter.type === 'topic') {
-      return savedCurrios.filter((curio) => curio.category === activeFilter.category);
+    if (resolvedFilter.type === 'all') return savedCurrios;
+    if (resolvedFilter.type === 'topic') {
+      return savedCurrios.filter((curio) => curio.category === resolvedFilter.category);
     }
-    const collection = collections.find((c) => c.id === activeFilter.collectionId);
+    const collection = collections.find((c) => c.id === resolvedFilter.collectionId);
     if (!collection) return savedCurrios;
     const idSet = new Set(collection.curioIds);
     return savedCurrios.filter((curio) => idSet.has(curio.id));
-  }, [activeFilter, collections, savedCurrios]);
+  }, [collections, resolvedFilter, savedCurrios]);
 
   const activeFilterLabel = useMemo(() => {
-    if (activeFilter.type === 'all') return 'All saved';
-    if (activeFilter.type === 'topic') return activeFilter.category;
+    if (resolvedFilter.type === 'all') return 'All saved';
+    if (resolvedFilter.type === 'topic') return resolvedFilter.category;
     return (
-      collections.find((c) => c.id === activeFilter.collectionId)?.name ?? 'Collection'
+      collections.find((c) => c.id === resolvedFilter.collectionId)?.name ?? 'Collection'
     );
-  }, [activeFilter, collections]);
+  }, [resolvedFilter, collections]);
 
   const openCurrio = (id: string) => {
     router.push(`/currio/${id}` as Href);
@@ -164,16 +163,16 @@ export default function BookmarksScreen() {
           </View>
 
           <BookmarksFilterButton
-            active={activeFilter}
+            active={resolvedFilter}
             activeLabel={activeFilterLabel}
             onPress={() => setFilterOpen(true)}
             isDark={isDark}
           />
         </Animated.View>
 
-        {activeFilter.type !== 'all' || sortedCollections.length > 0 ? (
+        {resolvedFilter.type !== 'all' || sortedCollections.length > 0 ? (
           <Animated.View entering={FadeInDown.delay(80).duration(320)} style={styles.chipRow}>
-            {activeFilter.type !== 'all' ? (
+            {resolvedFilter.type !== 'all' ? (
               <Pressable
                 onPress={() => setActiveFilter({ type: 'all' })}
                 style={[
@@ -188,7 +187,7 @@ export default function BookmarksScreen() {
               >
                 <Ionicons
                   name={
-                    activeFilter.type === 'collection'
+                    resolvedFilter.type === 'collection'
                       ? 'folder'
                       : 'funnel'
                   }
@@ -202,8 +201,8 @@ export default function BookmarksScreen() {
 
             {sortedCollections.slice(0, 3).map((collection) => {
               const selected =
-                activeFilter.type === 'collection' &&
-                activeFilter.collectionId === collection.id;
+                resolvedFilter.type === 'collection' &&
+                resolvedFilter.collectionId === collection.id;
               return (
                 <Pressable
                   key={collection.id}
@@ -327,7 +326,7 @@ export default function BookmarksScreen() {
         topics={topicFilters}
         counts={topicCounts}
         totalCount={savedCurrios.length}
-        active={activeFilter}
+        active={resolvedFilter}
         onChange={setActiveFilter}
         palette={palette}
       />

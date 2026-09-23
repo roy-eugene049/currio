@@ -365,6 +365,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ learningRemindersEnabled: false });
       await persistLearningRemindersEnabled(false);
       await syncLearningReminders({ enabled: false });
+      void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+        syncDailyCurioWidget({ remindersEnabled: false }),
+      );
       return true;
     }
 
@@ -375,6 +378,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ learningRemindersEnabled: false });
       await persistLearningRemindersEnabled(false);
     }
+    void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+      syncDailyCurioWidget({
+        remindersEnabled: get().learningRemindersEnabled,
+        reminderTimes: get().learningReminderTimes,
+      }),
+    );
     return scheduled;
   },
 
@@ -382,6 +391,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const normalized = normalizeReminderTimes(times);
     set({ learningReminderTimes: normalized });
     await persistLearningReminderTimes(normalized);
+
+    void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+      syncDailyCurioWidget({
+        remindersEnabled: get().learningRemindersEnabled,
+        reminderTimes: normalized,
+      }),
+    );
 
     if (!get().learningRemindersEnabled) return true;
     return pushReminderSchedule(get);
@@ -411,6 +427,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     if (state.lastOpenDate && isSameDay(state.lastOpenDate, today)) {
       await get().rescheduleReminders();
+      void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+        syncDailyCurioWidget({ streak: get().streak }),
+      );
       return;
     }
 
@@ -437,6 +456,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ ...next, streakFreezeWeekKey });
     await persistState(next);
     await get().rescheduleReminders();
+    void import('@/services/widgetService').then(({ syncDailyCurioWidget }) =>
+      syncDailyCurioWidget({ streak }),
+    );
   },
 
   getTodaysCurio: async () => {

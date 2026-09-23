@@ -243,10 +243,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backdropImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   backdropVignette: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: '50%',
   },
   ambient: {

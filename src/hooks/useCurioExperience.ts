@@ -12,51 +12,50 @@ type ExperienceState = {
   backdropUrl: string | null;
 };
 
-function initialState(curio: Curio | undefined): ExperienceState {
+function syncState(curio: Curio | undefined): ExperienceState | null {
   if (!curio) return { isReady: false, backdropUrl: null };
   if (isCurioExperiencePrepared(curio.id)) {
-    const url = peekCurioBackdropUrl(curio.id);
-    return { isReady: true, backdropUrl: url ?? null };
+    return { isReady: true, backdropUrl: peekCurioBackdropUrl(curio.id) ?? null };
   }
-  return { isReady: false, backdropUrl: null };
+  return null;
 }
 
 /**
  * Ensures backdrop URL + bitmap cache are ready before revealing the reader.
  */
 export function useCurioExperience(curio: Curio | undefined) {
-  const [state, setState] = useState<ExperienceState>(() => initialState(curio));
+  const synced = syncState(curio);
+  const [readyForId, setReadyForId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!curio) {
-      setState({ isReady: false, backdropUrl: null });
+    if (!curio || isCurioExperiencePrepared(curio.id)) {
       return;
     }
 
-    if (isCurioExperiencePrepared(curio.id)) {
-      const url = peekCurioBackdropUrl(curio.id);
-      setState({ isReady: true, backdropUrl: url ?? null });
-      return;
-    }
-
+    const curioId = curio.id;
     let cancelled = false;
-    const previousUrl = peekCurioBackdropUrl(curio.id);
-
-    setState({
-      isReady: false,
-      backdropUrl: previousUrl === undefined ? null : (previousUrl ?? null),
-    });
 
     void prepareCurioExperience(curio).then(() => {
       if (cancelled) return;
-      const url = peekCurioBackdropUrl(curio.id);
-      setState({ isReady: true, backdropUrl: url ?? null });
+      setReadyForId(curioId);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [curio?.id, curio?.title, curio?.content, curio?.category, curio?.image]);
+  }, [curio]);
 
-  return state;
+  if (synced) return synced;
+
+  if (curio && readyForId === curio.id) {
+    return {
+      isReady: true,
+      backdropUrl: peekCurioBackdropUrl(curio.id) ?? null,
+    };
+  }
+
+  return {
+    isReady: false,
+    backdropUrl: curio ? (peekCurioBackdropUrl(curio.id) ?? null) : null,
+  };
 }

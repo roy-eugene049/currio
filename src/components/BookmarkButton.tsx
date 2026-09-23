@@ -41,14 +41,18 @@ export function BookmarkButton({
   const handlePress = () => {
     const wasBookmarked = bookmarked;
 
-    scale.value = withSequence(
-      withSpring(1.28, { damping: 9, stiffness: 380 }),
-      withSpring(1, { damping: 14, stiffness: 280 }),
+    scale.set(
+      withSequence(
+        withSpring(1.28, { damping: 9, stiffness: 380 }),
+        withSpring(1, { damping: 14, stiffness: 280 }),
+      ),
     );
 
-    rotate.value = withSequence(
-      withSpring(wasBookmarked ? -12 : 10, { damping: 10, stiffness: 300 }),
-      withSpring(0, { damping: 12, stiffness: 220 }),
+    rotate.set(
+      withSequence(
+        withSpring(wasBookmarked ? -12 : 10, { damping: 10, stiffness: 300 }),
+        withSpring(0, { damping: 12, stiffness: 220 }),
+      ),
     );
 
     void (async () => {

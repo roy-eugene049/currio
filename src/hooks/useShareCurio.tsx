@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { StyleSheet, View } from 'react-native';
-import ViewShot from 'react-native-view-shot';
+import ViewShot, { type ViewShotRef } from 'react-native-view-shot';
 
 import {
   CURIO_SHARE_CARD_HEIGHT,
@@ -17,7 +17,7 @@ export function CurioShareCapturePortal({
   shotRef,
 }: {
   curio: Curio;
-  shotRef: React.RefObject<ViewShot | null>;
+  shotRef: React.RefObject<ViewShotRef | null>;
 }): ReactElement {
   return (
     <View style={styles.captureHost} pointerEvents="none" collapsable={false}>
@@ -56,13 +56,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
 }
 
 export function useShareCurio(curio: Curio) {
-  const shotRef = useRef<ViewShot | null>(null);
+  const shotRef = useRef<ViewShotRef | null>(null);
   const inFlightRef = useRef(false);
   const [mountCapture, setMountCapture] = useState(false);
   const [busy, setBusy] = useState(false);
   const pendingShareRef = useRef(false);
   const curioRef = useRef(curio);
-  curioRef.current = curio;
+
+  useEffect(() => {
+    curioRef.current = curio;
+  }, [curio]);
 
   const finish = useCallback(() => {
     inFlightRef.current = false;

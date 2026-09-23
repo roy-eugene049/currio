@@ -129,7 +129,7 @@ export function CurioBackdrop({ theme, imageUrl }: CurioBackdropProps) {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 0,
   },
 });

@@ -172,7 +172,7 @@ export function ChallengeSoftMiss({ active }: { active: boolean }) {
 
 const styles = StyleSheet.create({
   host: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     zIndex: 20,
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     top: -12,
   },
   missHost: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

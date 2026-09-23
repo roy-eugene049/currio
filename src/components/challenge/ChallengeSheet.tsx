@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -139,18 +139,19 @@ export function ChallengeSheet() {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [wins, setWins] = useState<number | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
+  const [sessionQuizId, setSessionQuizId] = useState<string | null>(null);
 
   const visible = Boolean(quiz);
+  const quizId = quiz?.curioId ?? null;
 
-  useEffect(() => {
-    if (!quiz) {
-      setPhase('prompt');
-      setWasCorrect(false);
-      setSelectedChoiceId(null);
-      setWins(null);
-      setFeedbackKey(0);
-    }
-  }, [quiz]);
+  if (quizId !== sessionQuizId) {
+    setSessionQuizId(quizId);
+    setPhase('prompt');
+    setWasCorrect(false);
+    setSelectedChoiceId(null);
+    setWins(null);
+    setFeedbackKey(0);
+  }
 
   const finish = async (correct: boolean) => {
     await markChallengeOffered();

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -187,10 +187,17 @@ export function ReminderTimeSheet({
   const { isDark, colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState<DraftClock>(() => toDraft(initialTime));
+  const openKey = visible
+    ? `${initialTime.hour}:${initialTime.minute}`
+    : null;
+  const [syncedOpenKey, setSyncedOpenKey] = useState(openKey);
 
-  useEffect(() => {
-    if (visible) setDraft(toDraft(initialTime));
-  }, [visible, initialTime]);
+  if (openKey !== syncedOpenKey) {
+    setSyncedOpenKey(openKey);
+    if (openKey) {
+      setDraft(toDraft(initialTime));
+    }
+  }
 
   const selected = useMemo(() => fromDraft(draft), [draft]);
   const selectedLabel = formatReminderTime(selected);
