@@ -34,8 +34,9 @@ yarn-error.*
 .env
 .env*.local
 
-# generated seed data (rebuilt by npm run curios:export)
-scripts/curios-export.json
+# private local copies (kept out of the public repo)
+/docs/
+/scripts/
 
 # typescript
 *.tsbuildinfo

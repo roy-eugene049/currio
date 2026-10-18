@@ -74,7 +74,7 @@ export async function createSessionFromUrl(url: string) {
 
 export async function signUp({ email, password }: SignUpParams) {
   if (!ENV.isSupabaseConfigured) {
-    throw new Error('Backend not configured. See docs/BACKEND.md');
+    throw new Error('Backend not configured. Add your Supabase keys to .env (see .env.example).');
   }
 
   const supabase = getSupabase();
@@ -89,7 +89,7 @@ export async function signUp({ email, password }: SignUpParams) {
 
 export async function signIn({ email, password }: SignInParams) {
   if (!ENV.isSupabaseConfigured) {
-    throw new Error('Backend not configured. See docs/BACKEND.md');
+    throw new Error('Backend not configured. Add your Supabase keys to .env (see .env.example).');
   }
 
   const supabase = getSupabase();
@@ -104,7 +104,7 @@ export async function signIn({ email, password }: SignInParams) {
 
 export async function signInWithGoogle() {
   if (!ENV.isSupabaseConfigured) {
-    throw new Error('Backend not configured. See docs/BACKEND.md');
+    throw new Error('Backend not configured. Add your Supabase keys to .env (see .env.example).');
   }
 
   const supabase = getSupabase();
@@ -176,7 +176,7 @@ export async function getVerifiedUser() {
 
 export async function resetPassword({ email }: ResetPasswordParams) {
   if (!ENV.isSupabaseConfigured) {
-    throw new Error('Backend not configured. See docs/BACKEND.md');
+    throw new Error('Backend not configured. Add your Supabase keys to .env (see .env.example).');
   }
 
   const supabase = getSupabase();

@@ -86,7 +86,7 @@ export default function LoginScreen() {
       }
     >
       {!ENV.isSupabaseConfigured && (
-        <AuthConfigBanner message="Supabase is not configured yet. Add your API keys to .env — see docs/BACKEND.md." />
+        <AuthConfigBanner message="Supabase is not configured yet. Add your API keys to .env — see .env.example." />
       )}
 
       <AuthInput

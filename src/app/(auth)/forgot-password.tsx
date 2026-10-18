@@ -55,7 +55,7 @@ export default function ForgotPasswordScreen() {
       }
     >
       {!ENV.isSupabaseConfigured && (
-        <AuthConfigBanner message="Supabase is not configured yet. Add your API keys to .env — see docs/BACKEND.md." />
+        <AuthConfigBanner message="Supabase is not configured yet. Add your API keys to .env — see .env.example." />
       )}
 
       {sent ? (

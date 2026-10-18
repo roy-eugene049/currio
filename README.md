@@ -4,7 +4,7 @@
 
 Currio is a curiosity micro-learning app — bite-sized curios, streaks that stay gentle, topics you choose, and tools that help facts stick. Built with Expo (SDK 57) and Supabase.
 
-**Current version:** [1.4.0](./docs/RELEASE_NOTES.md) · [Release notes](./docs/RELEASE_NOTES.md)
+**Current version:** 1.5.0
 
 ---
 
@@ -19,8 +19,6 @@ Currio is a curiosity micro-learning app — bite-sized curios, streaks that sta
 | Quiz | Optional **curiosity quiz** every few curios — one correct answer, skip anytime |
 | Share & email | Branded share cards, welcome email, weekly digest |
 | Account | Auth + cloud sync via Supabase |
-
-Full changelog by version: **[docs/RELEASE_NOTES.md](./docs/RELEASE_NOTES.md)**
 
 ---
 
@@ -44,7 +42,7 @@ Open with a [development build](https://docs.expo.dev/develop/development-builds
 
 ### Environment
 
-Copy your Supabase and related keys into `.env` (see [docs/BACKEND.md](./docs/BACKEND.md)). Restart Metro after changes:
+Copy `.env.example` to `.env` and fill in your Supabase (and optional) keys. Restart Metro after changes:
 
 ```bash
 npx expo start -c
@@ -55,24 +53,8 @@ npx expo start -c
 | Script | Purpose |
 |--------|---------|
 | `npm run lint` | ESLint |
-| `npm run curios:seed` | Seed the `curios` catalog into Supabase |
-| `npm run brand:assets` | Regenerate icon / splash from brand sources |
 | `npm run supabase:deploy:functions` | Deploy Edge Functions |
 | `npm run build:apk` | EAS preview APK |
-
----
-
-## Documentation
-
-| Doc | Description |
-|-----|-------------|
-| [**Release notes**](./docs/RELEASE_NOTES.md) | Shipped features by app version |
-| [Feature roadmap](./docs/FEATURE_ROADMAP.md) | Phased product plan |
-| [Backend](./docs/BACKEND.md) | Supabase auth, schema, sync |
-| [AI engine](./docs/AI_ENGINE.md) | Curio generation & feed architecture |
-| [Implementation guide](./docs/IMPLEMENTATION_GUIDE.md) | AI + Pexels setup walkthrough |
-| [Welcome email](./docs/WELCOME_EMAIL.md) | Resend welcome flow |
-| [Weekly digest](./docs/WEEKLY_DIGEST.md) | Sunday digest setup |
 
 Expo SDK reference for this project: [docs.expo.dev/versions/v57.0.0](https://docs.expo.dev/versions/v57.0.0/)
 
@@ -85,7 +67,6 @@ src/app/           Expo Router screens
 src/components/    UI (reader, bookmarks, challenge, profile, …)
 src/services/      Sync, curios, challenges, notifications
 src/store/         Zustand app + auth state
-docs/              Product & engineering docs
 supabase/          Migrations + Edge Functions
 ```
 
