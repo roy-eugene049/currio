@@ -38,6 +38,13 @@ yarn-error.*
 /docs/
 /scripts/
 
+# local assistant / editor tooling (not for public)
+AGENTS.md
+CLAUDE.md
+.claude/
+.cursor/
+agent-transcripts/
+
 # typescript
 *.tsbuildinfo
 

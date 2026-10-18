@@ -1,8 +1,6 @@
-# Faster EAS uploads — dev-only paths not needed for the app bundle
+# Faster EAS uploads — paths not needed for the app bundle
 docs/
 supabase/
 scripts/
 *.md
 .git/
-.cursor/
-agent-transcripts/
